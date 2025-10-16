@@ -113,8 +113,8 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
     onChange('');
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = async (e?: React.MouseEvent | React.FormEvent) => {
+    e?.preventDefault();
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
@@ -223,7 +223,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
   return (
     <div className="space-y-3">
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -231,16 +231,22 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
             placeholder="Search for a place, building, or area..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch(e as any);
+              }
+            }}
             className="pl-9"
           />
         </div>
-        <Button type="submit" disabled={isSearching || !searchQuery.trim()}>
+        <Button type="button" onClick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
           {isSearching ? 'Searching...' : 'Search'}
         </Button>
         <Button type="button" variant="outline" onClick={handleLocateMe}>
           <Locate className="h-4 w-4" />
         </Button>
-      </form>
+      </div>
       
       <div ref={mapContainer} className="w-full h-[400px] rounded-lg border" />
       
