@@ -268,7 +268,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           {/* Profile Photo Upload */}
           <div className="flex flex-col items-center space-y-4 pb-4 border-b">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={photoUrl || undefined} alt="Profile photo" />
+              {photoUrl ? (
+                <AvatarImage src={photoUrl} alt="Profile photo" />
+              ) : null}
               <AvatarFallback className="bg-primary/10 text-primary text-2xl">
                 {watch('first_name')?.[0] || <Camera className="h-10 w-10" />}
               </AvatarFallback>
