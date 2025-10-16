@@ -294,7 +294,7 @@ export default function AdminDashboard() {
 
           <Card 
             className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/admin/attendance-management')}
+            onClick={() => navigate('/admin/attendance')}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card 
             className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/admin/attendance-management')}
+            onClick={() => navigate('/admin/attendance')}
           >
             <CardHeader>
               <CardTitle>Department Attendance</CardTitle>
@@ -349,7 +349,7 @@ export default function AdminDashboard() {
 
           <Card 
             className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate('/admin/attendance-management')}
+            onClick={() => navigate('/admin/attendance')}
           >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
         {/* Attendance Trend */}
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => navigate('/admin/attendance-management')}
+          onClick={() => navigate('/admin/attendance')}
         >
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-4 justify-between">
@@ -478,7 +478,7 @@ export default function AdminDashboard() {
         {/* Recent Attendance Issues */}
         <Card 
           className="cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => navigate('/admin/attendance-management')}
+          onClick={() => navigate('/admin/attendance')}
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
