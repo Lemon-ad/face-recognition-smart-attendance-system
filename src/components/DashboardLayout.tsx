@@ -33,9 +33,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = userRole === 'admin' ? adminNavItems : memberNavItems;
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-border flex flex-col">
+      <aside className="w-64 bg-white border-r border-border flex flex-col h-screen">
         {/* Logo */}
         <div className="h-16 flex items-center justify-center border-b border-border">
           <h1 className="text-xl font-bold text-primary">
