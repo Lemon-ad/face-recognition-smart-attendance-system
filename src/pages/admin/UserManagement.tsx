@@ -195,7 +195,6 @@ export default function UserManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Department</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -204,7 +203,7 @@ export default function UserManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="ml-3 text-muted-foreground">Loading users...</span>
@@ -213,7 +212,7 @@ export default function UserManagement() {
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     {searchQuery
                       ? 'No users found matching your search.'
                       : 'No users found. Click "Add User" to create the first user.'}
@@ -225,13 +224,6 @@ export default function UserManagement() {
                     <TableCell className="font-medium">{getFullName(user)}</TableCell>
                     <TableCell>{user.username || 'N/A'}</TableCell>
                     <TableCell>{user.email || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.role === 'admin' ? 'default' : 'secondary'}
-                      >
-                        {user.role}
-                      </Badge>
-                    </TableCell>
                     <TableCell>{user.position_name || 'N/A'}</TableCell>
                     <TableCell>{user.department?.department_name || 'N/A'}</TableCell>
                     <TableCell className="text-right">
