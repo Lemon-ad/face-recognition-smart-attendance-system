@@ -39,10 +39,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="flex min-h-screen w-full bg-background">
       {/* Sidebar */}
-      <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+      <aside className="w-64 bg-white border-r border-border flex flex-col">
         {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
-          <h1 className="text-xl font-bold text-sidebar-foreground">
+        <div className="h-16 flex items-center justify-center border-b border-border">
+          <h1 className="text-xl font-bold text-primary">
             Smart Attendance
           </h1>
         </div>
@@ -57,8 +57,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-primary hover:bg-primary/5'
                 }`
               }
             >
@@ -69,10 +69,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-border">
           <Button
             variant="ghost"
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+            className="w-full justify-start text-primary hover:bg-primary/5"
             onClick={signOut}
           >
             <LogOut className="h-5 w-5 mr-3" />
