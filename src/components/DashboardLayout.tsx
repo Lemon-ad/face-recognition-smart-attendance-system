@@ -5,8 +5,6 @@ import {
   LayoutDashboard, 
   Users, 
   Building2, 
-  UsersRound, 
-  FileText, 
   ClipboardList,
   LogOut,
   User
@@ -25,7 +23,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { to: '/admin/users', icon: Users, label: 'User Management' },
     { to: '/admin/departments', icon: Building2, label: 'Departments & Groups' },
     { to: '/admin/attendance', icon: ClipboardList, label: 'Attendance' },
-    { to: '/admin/reports', icon: FileText, label: 'Reports' },
   ];
 
   const memberNavItems = [
