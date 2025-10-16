@@ -106,6 +106,9 @@ export function AddDepartmentMembersDialog({
   };
 
   const filteredUsers = users.filter((user) => {
+    // Exclude admin users
+    if (user.role === 'admin') return false;
+    
     const searchLower = searchQuery.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.middle_name || ''} ${user.last_name || ''}`.toLowerCase();
     return (
