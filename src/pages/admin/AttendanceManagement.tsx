@@ -12,52 +12,169 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-interface AttendanceRecord {
-  attendance_id: string;
+interface Department {
+  department_id: string;
+  department_name: string;
+}
+
+interface Group {
+  group_id: string;
+  group_name: string;
+  start_time: string | null;
+  department_id: string;
+}
+
+interface User {
   user_id: string;
-  check_in_time: string;
-  check_out_time: string | null;
-  status: string;
-  location: string | null;
-  created_at: string;
-  users: {
-    first_name: string | null;
-    last_name: string | null;
-    username: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+  group_id: string | null;
+  department_id: string | null;
+}
+
+interface AttendanceData {
+  user: User;
+  attendance: {
+    attendance_id: string;
+    check_in_time: string | null;
+    check_out_time: string | null;
+    status: string;
+    location: string | null;
   } | null;
+  group: Group | null;
 }
 
 export default function AttendanceManagement() {
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
+  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAttendance();
+    fetchDepartments();
   }, []);
 
-  const fetchAttendance = async () => {
+  useEffect(() => {
+    if (selectedDepartment) {
+      fetchGroups();
+      fetchAttendanceData();
+    }
+  }, [selectedDepartment, selectedGroup]);
+
+  const fetchDepartments = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
-        .from('attendance')
-        .select(`
-          *,
-          users (
-            first_name,
-            last_name,
-            username
-          )
-        `)
-        .order('check_in_time', { ascending: false });
+        .from('department')
+        .select('department_id, department_name')
+        .order('department_name');
 
       if (error) throw error;
-      setAttendanceRecords(data || []);
+      setDepartments(data || []);
+      if (data && data.length > 0) {
+        setSelectedDepartment(data[0].department_id);
+      }
     } catch (error) {
-      console.error('Error fetching attendance:', error);
-      toast.error('Failed to load attendance records');
+      console.error('Error fetching departments:', error);
+      toast.error('Failed to load departments');
+    }
+  };
+
+  const fetchGroups = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('group')
+        .select('group_id, group_name, start_time, department_id')
+        .eq('department_id', selectedDepartment)
+        .order('group_name');
+
+      if (error) throw error;
+      setGroups(data || []);
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+      toast.error('Failed to load groups');
+    }
+  };
+
+  const fetchAttendanceData = async () => {
+    try {
+      setLoading(true);
+      
+      // Build query for users
+      let usersQuery = supabase
+        .from('users')
+        .select('user_id, first_name, last_name, username, group_id, department_id')
+        .eq('department_id', selectedDepartment);
+
+      if (selectedGroup !== 'all') {
+        usersQuery = usersQuery.eq('group_id', selectedGroup);
+      }
+
+      const { data: users, error: usersError } = await usersQuery;
+      if (usersError) throw usersError;
+
+      // Get today's date for attendance filtering
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString();
+
+      // Fetch attendance records for today
+      const { data: attendanceRecords, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('*')
+        .gte('created_at', todayStr);
+
+      if (attendanceError) throw attendanceError;
+
+      // Fetch groups for start_time comparison
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('group')
+        .select('group_id, group_name, start_time, department_id');
+
+      if (groupsError) throw groupsError;
+
+      // Map users with their attendance
+      const mappedData: AttendanceData[] = (users || []).map(user => {
+        const userAttendance = attendanceRecords?.find(a => a.user_id === user.user_id);
+        const userGroup = groupsData?.find(g => g.group_id === user.group_id);
+
+        let status = 'absent';
+        if (userAttendance?.check_in_time) {
+          if (userGroup?.start_time) {
+            const checkInTime = new Date(userAttendance.check_in_time);
+            const [hours, minutes] = userGroup.start_time.split(':').map(Number);
+            const startTime = new Date(checkInTime);
+            startTime.setHours(hours, minutes, 0, 0);
+
+            status = checkInTime > startTime ? 'late' : 'present';
+          } else {
+            status = 'present';
+          }
+        }
+
+        return {
+          user,
+          attendance: userAttendance ? {
+            attendance_id: userAttendance.attendance_id,
+            check_in_time: userAttendance.check_in_time,
+            check_out_time: userAttendance.check_out_time,
+            status,
+            location: userAttendance.location,
+          } : null,
+          group: userGroup || null,
+        };
+      });
+
+      setAttendanceData(mappedData);
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+      toast.error('Failed to load attendance data');
     } finally {
       setLoading(false);
     }
@@ -76,8 +193,7 @@ export default function AttendanceManagement() {
     }
   };
 
-  const getUserName = (user: AttendanceRecord['users']) => {
-    if (!user) return 'Unknown User';
+  const getUserName = (user: User) => {
     return user.first_name && user.last_name
       ? `${user.first_name} ${user.last_name}`
       : user.username || 'Unknown User';
@@ -94,6 +210,39 @@ export default function AttendanceManagement() {
         <Card>
           <CardHeader>
             <CardTitle>Attendance Records</CardTitle>
+            <div className="flex gap-4 mt-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Department</label>
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.department_id} value={dept.department_id}>
+                        {dept.department_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Group</label>
+                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {groups.map((group) => (
+                      <SelectItem key={group.group_id} value={group.group_id}>
+                        {group.group_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -114,32 +263,34 @@ export default function AttendanceManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendanceRecords.length === 0 ? (
+                  {attendanceData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No attendance records found
+                        No users found in selected department/group
                       </TableCell>
                     </TableRow>
                   ) : (
-                    attendanceRecords.map((record) => (
-                      <TableRow key={record.attendance_id}>
+                    attendanceData.map((data) => (
+                      <TableRow key={data.user.user_id}>
                         <TableCell className="font-medium">
-                          {getUserName(record.users)}
+                          {getUserName(data.user)}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(record.check_in_time), 'MMM dd, yyyy HH:mm')}
-                        </TableCell>
-                        <TableCell>
-                          {record.check_out_time
-                            ? format(new Date(record.check_out_time), 'MMM dd, yyyy HH:mm')
+                          {data.attendance?.check_in_time
+                            ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm')
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(record.status)}>
-                            {record.status}
+                          {data.attendance?.check_out_time
+                            ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(data.attendance?.status || 'absent')}>
+                            {data.attendance?.status || 'absent'}
                           </Badge>
                         </TableCell>
-                        <TableCell>{record.location || '-'}</TableCell>
+                        <TableCell>{data.attendance?.location || '-'}</TableCell>
                       </TableRow>
                     ))
                   )}
