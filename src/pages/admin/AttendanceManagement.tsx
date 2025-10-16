@@ -311,13 +311,12 @@ export default function AttendanceManagement() {
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Location</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {attendanceData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No users found in selected department/group
                       </TableCell>
                     </TableRow>
@@ -358,7 +357,6 @@ export default function AttendanceManagement() {
                             <Badge variant="destructive">Absent</Badge>
                           )}
                         </TableCell>
-                        <TableCell>{data.attendance?.location || '-'}</TableCell>
                       </TableRow>
                     ))
                   )}
