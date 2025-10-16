@@ -111,7 +111,8 @@ export default function AttendanceManagement() {
       // Build query for users
       let usersQuery = supabase
         .from('users')
-        .select('user_id, first_name, last_name, username, group_id, department_id');
+        .select('user_id, first_name, last_name, username, group_id, department_id')
+        .neq('role', 'admin');
       
       if (selectedDepartment !== 'all') {
         usersQuery = usersQuery.eq('department_id', selectedDepartment);
