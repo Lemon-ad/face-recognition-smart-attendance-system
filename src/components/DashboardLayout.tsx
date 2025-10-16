@@ -28,7 +28,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const memberNavItems = [
     { to: '/member', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/member/profile', icon: User, label: 'My Profile' },
-    { to: '/member/attendance', icon: ClipboardList, label: 'My Attendance' },
   ];
 
   const navItems = userRole === 'admin' ? adminNavItems : memberNavItems;
