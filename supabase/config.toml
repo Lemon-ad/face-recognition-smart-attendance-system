@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.compare-faces-public]
 verify_jwt = false
+
+[functions.update-attendance-status]
+verify_jwt = false
