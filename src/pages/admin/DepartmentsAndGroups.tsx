@@ -369,20 +369,19 @@ export default function DepartmentsAndGroups() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Group Name</TableHead>
-                    <TableHead>Location</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {!selectedDepartmentId ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={2} className="text-center py-12 text-muted-foreground">
                         Select a department to view its groups
                       </TableCell>
                     </TableRow>
                   ) : loading ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12">
+                      <TableCell colSpan={2} className="text-center py-12">
                         <div className="flex items-center justify-center">
                           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                           <span className="ml-3 text-muted-foreground">Loading...</span>
@@ -391,7 +390,7 @@ export default function DepartmentsAndGroups() {
                     </TableRow>
                   ) : filteredGroups.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={2} className="text-center py-12 text-muted-foreground">
                         {groupSearchQuery
                           ? 'No groups found.'
                           : 'No groups. Click "Add Group" to create one.'}
@@ -401,7 +400,6 @@ export default function DepartmentsAndGroups() {
                     filteredGroups.map((group) => (
                       <TableRow key={group.group_id} className="hover:bg-muted/50">
                         <TableCell className="font-medium">{group.group_name}</TableCell>
-                        <TableCell>{group.group_location || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
