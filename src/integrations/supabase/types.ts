@@ -17,7 +17,7 @@ export type Database = {
       attendance: {
         Row: {
           attendance_id: string
-          check_in_time: string
+          check_in_time: string | null
           check_out_time: string | null
           created_at: string | null
           location: string | null
@@ -27,7 +27,7 @@ export type Database = {
         }
         Insert: {
           attendance_id?: string
-          check_in_time: string
+          check_in_time?: string | null
           check_out_time?: string | null
           created_at?: string | null
           location?: string | null
@@ -37,7 +37,7 @@ export type Database = {
         }
         Update: {
           attendance_id?: string
-          check_in_time?: string
+          check_in_time?: string | null
           check_out_time?: string | null
           created_at?: string | null
           location?: string | null
@@ -215,7 +215,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      attendance_status_enum: "absent" | "present" | "late"
+      attendance_status_enum:
+        | "absent"
+        | "present"
+        | "late"
+        | "early_out"
+        | "no_checkout"
       user_role_enum: "admin" | "member"
     }
     CompositeTypes: {
@@ -344,7 +349,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      attendance_status_enum: ["absent", "present", "late"],
+      attendance_status_enum: [
+        "absent",
+        "present",
+        "late",
+        "early_out",
+        "no_checkout",
+      ],
       user_role_enum: ["admin", "member"],
     },
   },

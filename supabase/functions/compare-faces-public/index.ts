@@ -93,32 +93,35 @@ serve(async (req) => {
             .filter(Boolean)
             .join(' ');
 
-          // Get group and department info to determine start_time
+          // Get group and department info to determine start_time and end_time
           let startTime = null;
+          let endTime = null;
           
-          // First, try to get group start_time if user has a group
+          // First, try to get group start_time and end_time if user has a group
           if (user.group_id) {
             const { data: groupData } = await supabase
               .from('group')
-              .select('start_time')
+              .select('start_time, end_time')
               .eq('group_id', user.group_id)
               .single();
             
             if (groupData?.start_time) {
               startTime = groupData.start_time;
+              endTime = groupData.end_time;
             }
           }
           
-          // If no group start_time, fall back to department start_time
+          // If no group start_time, fall back to department start_time and end_time
           if (!startTime && user.department_id) {
             const { data: deptData } = await supabase
               .from('department')
-              .select('start_time')
+              .select('start_time, end_time')
               .eq('department_id', user.department_id)
               .single();
             
             if (deptData?.start_time) {
               startTime = deptData.start_time;
+              endTime = deptData.end_time;
             }
           }
 
@@ -167,11 +170,25 @@ serve(async (req) => {
             .single();
 
           if (existingAttendance) {
-            // User already checked in today - update check_out_time
+            // User already checked in today - update check_out_time and determine status
+            let checkOutStatus = status; // Use existing status logic by default
+            
+            if (endTime) {
+              const [hours, minutes] = endTime.split(':').map(Number);
+              const endDateTime = new Date(klTime);
+              endDateTime.setHours(hours, minutes, 0, 0);
+              
+              // Check if checkout is before end time
+              if (klTime < endDateTime) {
+                checkOutStatus = 'early_out';
+              }
+            }
+            
             await supabase
               .from('attendance')
               .update({
                 check_out_time: klTime.toISOString(),
+                status: checkOutStatus,
               })
               .eq('attendance_id', existingAttendance.attendance_id);
 
@@ -184,7 +201,7 @@ serve(async (req) => {
                   username: user.username,
                 },
                 action: 'check_out',
-                status: status,
+                status: checkOutStatus,
                 confidence: compareResult.confidence,
               }),
               { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -201,9 +201,13 @@ export default function AttendanceManagement() {
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
-        return 'default';
+        return 'success';
       case 'late':
+        return 'warning';
+      case 'early_out':
         return 'secondary';
+      case 'no_checkout':
+        return 'destructive';
       case 'absent':
         return 'destructive';
       default:
