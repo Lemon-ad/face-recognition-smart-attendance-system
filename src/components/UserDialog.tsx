@@ -5,13 +5,13 @@ import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -253,16 +253,16 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit User' : 'Add New User'}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-[600px] sm:w-[600px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{isEdit ? 'Edit User' : 'Add New User'}</SheetTitle>
+          <SheetDescription>
             {isEdit
               ? 'Update user information below'
               : 'Fill in the details to create a new user account'}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Profile Photo Upload */}
@@ -432,7 +432,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             </div>
           </div>
 
-          <DialogFooter>
+          <SheetFooter>
             <Button
               type="button"
               variant="outline"
@@ -444,9 +444,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             <Button type="submit" disabled={loading}>
               {loading ? 'Saving...' : isEdit ? 'Update User' : 'Create User'}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
