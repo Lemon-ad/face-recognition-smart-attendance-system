@@ -1,10 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { MapPin, Search, Locate } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// Fix for default marker icons in Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 interface LocationMapPickerProps {
   value?: string;
@@ -13,46 +21,40 @@ interface LocationMapPickerProps {
 
 export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const map = useRef<L.Map | null>(null);
+  const marker = useRef<L.Marker | null>(null);
   const [coordinates, setCoordinates] = useState<string>(value || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!mapContainer.current) return;
-
-    mapboxgl.accessToken = '4bb748cd56d517de39f2a93e88ab9c3bf69c06ed38d134940f3f718c5d8b7b71';
+    if (!mapContainer.current || map.current) return;
 
     // Parse initial coordinates if provided, otherwise try geolocation
-    let initialCenter: [number, number] = [101.6869, 3.1390]; // Default: Kuala Lumpur
+    let initialCenter: [number, number] = [3.1390, 101.6869]; // Default: Kuala Lumpur [lat, lng]
     if (value) {
       const [lng, lat] = value.split(',').map(Number);
       if (!isNaN(lng) && !isNaN(lat)) {
-        initialCenter = [lng, lat];
+        initialCenter = [lat, lng]; // Leaflet uses [lat, lng]
       }
     }
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: initialCenter,
-      zoom: 12,
-    });
+    // Initialize map
+    map.current = L.map(mapContainer.current).setView(initialCenter, 12);
 
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map.current);
 
     // Try to get user's location
     if (!value && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { longitude, latitude } = position.coords;
-          map.current?.flyTo({
-            center: [longitude, latitude],
-            zoom: 14,
-          });
+          map.current?.setView([latitude, longitude], 14);
         },
         (error) => {
           console.log('Geolocation error:', error);
@@ -62,13 +64,11 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
     // Add initial marker if coordinates exist
     if (value) {
-      marker.current = new mapboxgl.Marker({ draggable: true })
-        .setLngLat(initialCenter)
-        .addTo(map.current);
+      marker.current = L.marker(initialCenter, { draggable: true }).addTo(map.current);
 
       marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        const coords = `${lngLat.lng},${lngLat.lat}`;
+        const latlng = marker.current!.getLatLng();
+        const coords = `${latlng.lng},${latlng.lat}`;
         setCoordinates(coords);
         onChange(coords);
       });
@@ -76,7 +76,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
     // Add click handler to map
     map.current.on('click', (e) => {
-      const { lng, lat } = e.lngLat;
+      const { lat, lng } = e.latlng;
       const coords = `${lng},${lat}`;
       
       // Remove existing marker
@@ -85,13 +85,11 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
       }
 
       // Add new marker
-      marker.current = new mapboxgl.Marker({ draggable: true })
-        .setLngLat([lng, lat])
-        .addTo(map.current!);
+      marker.current = L.marker([lat, lng], { draggable: true }).addTo(map.current!);
 
       marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        const coords = `${lngLat.lng},${lngLat.lat}`;
+        const latlng = marker.current!.getLatLng();
+        const coords = `${latlng.lng},${latlng.lat}`;
         setCoordinates(coords);
         onChange(coords);
       });
@@ -102,6 +100,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
     return () => {
       map.current?.remove();
+      map.current = null;
     };
   }, []);
 
@@ -120,32 +119,29 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
     setIsSearching(true);
     try {
+      // Using Nominatim (OpenStreetMap's geocoding service)
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=4bb748cd56d517de39f2a93e88ab9c3bf69c06ed38d134940f3f718c5d8b7b71&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
       );
       const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
         
         // Fly to location
-        map.current?.flyTo({
-          center: [lng, lat],
-          zoom: 15,
-        });
+        map.current?.setView([lat, lng], 15);
 
         // Add marker
         if (marker.current) {
           marker.current.remove();
         }
 
-        marker.current = new mapboxgl.Marker({ draggable: true })
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
+        marker.current = L.marker([lat, lng], { draggable: true }).addTo(map.current!);
 
         marker.current.on('dragend', () => {
-          const lngLat = marker.current!.getLngLat();
-          const coords = `${lngLat.lng},${lngLat.lat}`;
+          const latlng = marker.current!.getLatLng();
+          const coords = `${latlng.lng},${latlng.lat}`;
           setCoordinates(coords);
           onChange(coords);
         });
@@ -156,7 +152,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
         toast({
           title: 'Location found',
-          description: data.features[0].place_name,
+          description: data[0].display_name,
         });
       } else {
         toast({
@@ -183,23 +179,18 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
         (position) => {
           const { longitude, latitude } = position.coords;
           
-          map.current?.flyTo({
-            center: [longitude, latitude],
-            zoom: 15,
-          });
+          map.current?.setView([latitude, longitude], 15);
 
           // Add marker
           if (marker.current) {
             marker.current.remove();
           }
 
-          marker.current = new mapboxgl.Marker({ draggable: true })
-            .setLngLat([longitude, latitude])
-            .addTo(map.current!);
+          marker.current = L.marker([latitude, longitude], { draggable: true }).addTo(map.current!);
 
           marker.current.on('dragend', () => {
-            const lngLat = marker.current!.getLngLat();
-            const coords = `${lngLat.lng},${lngLat.lat}`;
+            const latlng = marker.current!.getLatLng();
+            const coords = `${latlng.lng},${latlng.lat}`;
             setCoordinates(coords);
             onChange(coords);
           });
