@@ -13,8 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { History } from 'lucide-react';
+import { AttendanceHistoryDialog } from '@/components/AttendanceHistoryDialog';
 
 interface Department {
   department_id: string;
@@ -56,6 +59,7 @@ export default function AttendanceManagement() {
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchDepartments();
@@ -231,7 +235,16 @@ export default function AttendanceManagement() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Attendance Records</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Attendance Records</CardTitle>
+              <Button
+                variant="outline"
+                onClick={() => setHistoryDialogOpen(true)}
+              >
+                <History className="h-4 w-4 mr-2" />
+                View History
+              </Button>
+            </div>
             <div className="flex gap-4 mt-4">
               <div className="flex-1">
                 <label className="text-sm font-medium mb-2 block">Department</label>
@@ -322,6 +335,11 @@ export default function AttendanceManagement() {
           </CardContent>
         </Card>
       </div>
+
+      <AttendanceHistoryDialog 
+        open={historyDialogOpen} 
+        onOpenChange={setHistoryDialogOpen}
+      />
     </DashboardLayout>
   );
 }
