@@ -164,14 +164,15 @@ serve(async (req) => {
           
           const { data: existingAttendance } = await supabase
             .from('attendance')
-            .select('attendance_id, check_in_time')
+            .select('attendance_id, check_in_time, status')
             .eq('user_id', user.user_id)
             .gte('created_at', today.toISOString())
             .single();
 
           if (existingAttendance) {
             // User already checked in today - update check_out_time and determine status
-            let checkOutStatus = status; // Use existing status logic by default
+            // Keep the original check-in status (present/late) unless checking out early
+            let checkOutStatus = existingAttendance.status;
             
             if (endTime) {
               const [hours, minutes] = endTime.split(':').map(Number);
