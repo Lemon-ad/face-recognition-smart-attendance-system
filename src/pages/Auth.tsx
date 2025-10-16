@@ -4,9 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Scan, Camera } from 'lucide-react';
+import { Eye, EyeOff, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PublicFaceScanDialog } from '@/components/PublicFaceScanDialog';
+import logo from '@/assets/logo.png';
 
 export default function Auth() {
   const [username, setUsername] = useState('');
@@ -57,8 +58,8 @@ export default function Auth() {
         <div className="bg-card rounded-2xl shadow-lg p-8 space-y-6 border border-border">
           {/* Logo */}
           <div className="flex justify-center">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-md">
-              <Scan className="h-10 w-10 text-primary-foreground" />
+            <div className="h-24 w-24 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center p-3">
+              <img src={logo} alt="Smart Attendance Logo" className="h-full w-full object-contain" />
             </div>
           </div>
 
