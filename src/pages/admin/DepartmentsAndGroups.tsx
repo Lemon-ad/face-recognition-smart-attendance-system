@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DepartmentDialog } from '@/components/DepartmentDialog';
 import { GroupDialog } from '@/components/GroupDialog';
 import { AddDepartmentMembersDialog } from '@/components/AddDepartmentMembersDialog';
+import { AddGroupMembersDialog } from '@/components/AddGroupMembersDialog';
 import { Users } from 'lucide-react';
 
 type Department = Tables<'department'>;
@@ -51,7 +52,9 @@ export default function DepartmentsAndGroups() {
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
   const [addMembersDialogOpen, setAddMembersDialogOpen] = useState(false);
+  const [addGroupMembersDialogOpen, setAddGroupMembersDialogOpen] = useState(false);
   const [departmentForMembers, setDepartmentForMembers] = useState<Department | null>(null);
+  const [groupForMembers, setGroupForMembers] = useState<GroupWithDepartment | null>(null);
   
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupWithDepartment | null>(null);
@@ -407,6 +410,17 @@ export default function DepartmentsAndGroups() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
+                                setGroupForMembers(group);
+                                setAddGroupMembersDialogOpen(true);
+                              }}
+                              title="Add Members"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
                                 setSelectedGroup(group);
                                 setGroupDialogOpen(true);
                               }}
@@ -458,6 +472,13 @@ export default function DepartmentsAndGroups() {
         onOpenChange={setAddMembersDialogOpen}
         department={departmentForMembers}
         onSuccess={fetchDepartments}
+      />
+
+      <AddGroupMembersDialog
+        open={addGroupMembersDialogOpen}
+        onOpenChange={setAddGroupMembersDialogOpen}
+        group={groupForMembers}
+        onSuccess={fetchGroups}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
