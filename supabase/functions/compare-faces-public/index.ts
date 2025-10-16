@@ -132,6 +132,11 @@ serve(async (req) => {
             const startDateTime = new Date(checkInTime);
             startDateTime.setHours(hours, minutes, 0, 0);
 
+            console.log('Check-in time:', checkInTime.toISOString());
+            console.log('Start time:', startDateTime.toISOString());
+            console.log('Start time string:', startTime);
+            console.log('Check-in <= Start?', checkInTime <= startDateTime);
+
             // Determine status based on check-in time
             if (checkInTime <= startDateTime) {
               status = 'present';
@@ -142,6 +147,8 @@ serve(async (req) => {
             // If no start_time found, default to present
             status = 'present';
           }
+
+          console.log('Final status:', status);
 
           // Check if attendance already exists today
           const today = new Date();
