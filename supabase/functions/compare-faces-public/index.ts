@@ -151,8 +151,8 @@ serve(async (req) => {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
             
-            // Allow 100 meters tolerance
-            locationMatches = distance <= 100;
+            // Allow 5km (5000 meters) tolerance
+            locationMatches = distance <= 5000;
             
             console.log('Location validation:', {
               userLocation,
