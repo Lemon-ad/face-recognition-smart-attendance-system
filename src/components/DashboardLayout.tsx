@@ -23,8 +23,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const adminNavItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/users', icon: Users, label: 'User Management' },
-    { to: '/admin/departments', icon: Building2, label: 'Departments' },
-    { to: '/admin/groups', icon: UsersRound, label: 'Groups' },
+    { to: '/admin/departments', icon: Building2, label: 'Departments & Groups' },
     { to: '/admin/attendance', icon: ClipboardList, label: 'Attendance' },
     { to: '/admin/reports', icon: FileText, label: 'Reports' },
   ];
