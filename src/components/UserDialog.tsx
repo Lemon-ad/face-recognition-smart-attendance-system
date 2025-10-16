@@ -142,8 +142,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
       if (error) throw error;
 
-      if (data?.url) {
-        setPhotoUrl(data.url);
+      const newUrl = data?.display_url || data?.url;
+      if (newUrl) {
+        setPhotoUrl(newUrl);
         toast({
           title: 'Success',
           description: 'Photo uploaded successfully',
