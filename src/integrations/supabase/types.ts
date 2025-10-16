@@ -55,48 +55,6 @@ export type Database = {
           },
         ]
       }
-      attendance_history: {
-        Row: {
-          archived_at: string
-          attendance_date: string
-          attendance_id: string
-          check_in_time: string | null
-          check_out_time: string | null
-          created_at: string | null
-          history_id: string
-          location: string | null
-          status: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          archived_at?: string
-          attendance_date: string
-          attendance_id: string
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string | null
-          history_id?: string
-          location?: string | null
-          status: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          archived_at?: string
-          attendance_date?: string
-          attendance_id?: string
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string | null
-          history_id?: string
-          location?: string | null
-          status?: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       department: {
         Row: {
           created_at: string | null
