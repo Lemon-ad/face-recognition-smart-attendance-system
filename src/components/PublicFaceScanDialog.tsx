@@ -141,9 +141,19 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       }
 
       if (compareData.matched) {
-        const statusText = compareData.status === 'present' ? 'on time' : 
-                          compareData.status === 'late' ? 'late' : 'marked';
-        toast.success(`Attendance marked ${statusText}, welcome ${compareData.user.username || compareData.user.name}!`, {
+        const userName = compareData.user.name || compareData.user.username;
+        const action = compareData.action === 'check_out' ? 'Check-out' : 'Check-in';
+        
+        let message = `${action} successful! Welcome, ${userName}`;
+        if (compareData.action === 'check_in') {
+          if (compareData.status === 'present') {
+            message += ' - You\'re on time! ✓';
+          } else if (compareData.status === 'late') {
+            message += ' - Marked as late';
+          }
+        }
+        
+        toast.success(message, {
           duration: 5000,
         });
         handleClose();

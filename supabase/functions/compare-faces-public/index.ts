@@ -161,44 +161,59 @@ serve(async (req) => {
           
           const { data: existingAttendance } = await supabase
             .from('attendance')
-            .select('attendance_id')
+            .select('attendance_id, check_in_time')
             .eq('user_id', user.user_id)
             .gte('created_at', today.toISOString())
             .single();
 
           if (existingAttendance) {
-            // Update existing attendance
+            // User already checked in today - update check_out_time
             await supabase
               .from('attendance')
               .update({
-                check_in_time: checkInTime.toISOString(),
-                status: status,
+                check_out_time: klTime.toISOString(),
               })
               .eq('attendance_id', existingAttendance.attendance_id);
+
+            return new Response(
+              JSON.stringify({
+                matched: true,
+                user: {
+                  user_id: user.user_id,
+                  name: fullName,
+                  username: user.username,
+                },
+                action: 'check_out',
+                status: status,
+                confidence: compareResult.confidence,
+              }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
           } else {
-            // Create new attendance record
+            // First scan of the day - create new attendance record with check_in_time
             await supabase
               .from('attendance')
               .insert({
                 user_id: user.user_id,
-                check_in_time: checkInTime.toISOString(),
+                check_in_time: klTime.toISOString(),
                 status: status,
               });
-          }
 
-          return new Response(
-            JSON.stringify({
-              matched: true,
-              user: {
-                user_id: user.user_id,
-                name: fullName,
-                username: user.username,
-              },
-              status: status,
-              confidence: compareResult.confidence,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+            return new Response(
+              JSON.stringify({
+                matched: true,
+                user: {
+                  user_id: user.user_id,
+                  name: fullName,
+                  username: user.username,
+                },
+                action: 'check_in',
+                status: status,
+                confidence: compareResult.confidence,
+              }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
       } catch (error) {
         console.error(`Error comparing with user ${user.user_id}:`, error);
