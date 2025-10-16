@@ -145,18 +145,11 @@ export default function AttendanceManagement() {
         const userGroup = groupsData?.find(g => g.group_id === user.group_id);
 
         let status = 'absent';
-        if (userAttendance?.check_in_time) {
-          if (userGroup?.start_time) {
-            const checkInTime = new Date(userAttendance.check_in_time);
-            const [hours, minutes] = userGroup.start_time.split(':').map(Number);
-            const startTime = new Date(checkInTime);
-            startTime.setHours(hours, minutes, 0, 0);
-
-            status = checkInTime > startTime ? 'late' : 'present';
-          } else {
-            status = 'present';
-          }
+        if (userAttendance) {
+          // Trust the database status written by the edge function
+          status = userAttendance.status || 'absent';
         }
+
 
         return {
           user,
