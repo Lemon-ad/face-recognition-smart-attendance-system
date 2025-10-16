@@ -1,5 +1,4 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +44,7 @@ export default function DepartmentsAndGroups() {
   const [filteredGroups, setFilteredGroups] = useState<GroupWithDepartment[]>([]);
   const [groupSearchQuery, setGroupSearchQuery] = useState('');
   
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
@@ -96,16 +96,20 @@ export default function DepartmentsAndGroups() {
   }, [departmentSearchQuery, departments]);
 
   useEffect(() => {
-    const filtered = groups.filter((group) => {
-      const searchLower = groupSearchQuery.toLowerCase();
-      return (
-        group.group_name?.toLowerCase().includes(searchLower) ||
-        group.group_location?.toLowerCase().includes(searchLower) ||
-        group.department?.department_name?.toLowerCase().includes(searchLower)
-      );
-    });
-    setFilteredGroups(filtered);
-  }, [groupSearchQuery, groups]);
+    if (selectedDepartmentId) {
+      const filtered = groups.filter((group) => {
+        const matchesDepartment = group.department_id === selectedDepartmentId;
+        const searchLower = groupSearchQuery.toLowerCase();
+        const matchesSearch = 
+          group.group_name?.toLowerCase().includes(searchLower) ||
+          group.group_location?.toLowerCase().includes(searchLower);
+        return matchesDepartment && matchesSearch;
+      });
+      setFilteredGroups(filtered);
+    } else {
+      setFilteredGroups([]);
+    }
+  }, [groupSearchQuery, groups, selectedDepartmentId]);
 
   const fetchDepartments = async () => {
     try {
@@ -218,23 +222,11 @@ export default function DepartmentsAndGroups() {
           </p>
         </div>
 
-        <Tabs defaultValue="departments" className="w-full">
-          <TabsList>
-            <TabsTrigger value="departments">Departments</TabsTrigger>
-            <TabsTrigger value="groups">Groups</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="departments" className="space-y-6 mt-6">
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left Side - Departments */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search departments..."
-                  value={departmentSearchQuery}
-                  onChange={(e) => setDepartmentSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <h2 className="text-xl font-semibold text-foreground">Departments</h2>
               <Button onClick={() => {
                 setSelectedDepartment(null);
                 setDepartmentDialogOpen(true);
@@ -244,46 +236,54 @@ export default function DepartmentsAndGroups() {
               </Button>
             </div>
 
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search departments..."
+                value={departmentSearchQuery}
+                onChange={(e) => setDepartmentSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
             <div className="bg-card rounded-lg border border-border overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Department Name</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12">
+                      <TableCell colSpan={3} className="text-center py-12">
                         <div className="flex items-center justify-center">
                           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span className="ml-3 text-muted-foreground">Loading departments...</span>
+                          <span className="ml-3 text-muted-foreground">Loading...</span>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredDepartments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
                         {departmentSearchQuery
-                          ? 'No departments found matching your search.'
-                          : 'No departments found. Click "Add Department" to create the first department.'}
+                          ? 'No departments found.'
+                          : 'No departments. Click "Add Department" to create one.'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredDepartments.map((dept) => (
-                      <TableRow key={dept.department_id}>
+                      <TableRow 
+                        key={dept.department_id}
+                        className={`cursor-pointer ${selectedDepartmentId === dept.department_id ? 'bg-primary/10' : 'hover:bg-muted/50'}`}
+                        onClick={() => setSelectedDepartmentId(dept.department_id)}
+                      >
                         <TableCell className="font-medium">{dept.department_name}</TableCell>
                         <TableCell>{dept.department_location || 'N/A'}</TableCell>
-                        <TableCell>{dept.start_time || 'N/A'}</TableCell>
-                        <TableCell>{dept.end_time || 'N/A'}</TableCell>
-                        <TableCell className="max-w-xs truncate">{dept.department_description || 'N/A'}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -314,26 +314,37 @@ export default function DepartmentsAndGroups() {
                 </TableBody>
               </Table>
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="groups" className="space-y-6 mt-6">
+          {/* Right Side - Groups */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search groups..."
-                  value={groupSearchQuery}
-                  onChange={(e) => setGroupSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button onClick={() => {
-                setSelectedGroup(null);
-                setGroupDialogOpen(true);
-              }}>
+              <h2 className="text-xl font-semibold text-foreground">
+                {selectedDepartmentId 
+                  ? `Groups in ${departments.find(d => d.department_id === selectedDepartmentId)?.department_name || 'Department'}`
+                  : 'Groups'}
+              </h2>
+              <Button 
+                onClick={() => {
+                  setSelectedGroup(null);
+                  setGroupDialogOpen(true);
+                }}
+                disabled={!selectedDepartmentId}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Group
               </Button>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search groups..."
+                value={groupSearchQuery}
+                onChange={(e) => setGroupSearchQuery(e.target.value)}
+                className="pl-10"
+                disabled={!selectedDepartmentId}
+              />
             </div>
 
             <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -341,49 +352,39 @@ export default function DepartmentsAndGroups() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Group Name</TableHead>
-                    <TableHead>Department</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Start Time</TableHead>
-                    <TableHead>End Time</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading ? (
+                  {!selectedDepartmentId ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                        Select a department to view its groups
+                      </TableCell>
+                    </TableRow>
+                  ) : loading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-12">
                         <div className="flex items-center justify-center">
                           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          <span className="ml-3 text-muted-foreground">Loading groups...</span>
+                          <span className="ml-3 text-muted-foreground">Loading...</span>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : filteredGroups.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
                         {groupSearchQuery
-                          ? 'No groups found matching your search.'
-                          : 'No groups found. Click "Add Group" to create the first group.'}
+                          ? 'No groups found.'
+                          : 'No groups. Click "Add Group" to create one.'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredGroups.map((group) => (
-                      <TableRow key={group.group_id}>
+                      <TableRow key={group.group_id} className="hover:bg-muted/50">
                         <TableCell className="font-medium">{group.group_name}</TableCell>
-                        <TableCell>
-                          {group.department ? (
-                            <Badge variant="outline">
-                              {group.department.department_name}
-                            </Badge>
-                          ) : (
-                            'N/A'
-                          )}
-                        </TableCell>
                         <TableCell>{group.group_location || 'N/A'}</TableCell>
-                        <TableCell>{group.start_time || 'N/A'}</TableCell>
-                        <TableCell>{group.end_time || 'N/A'}</TableCell>
-                        <TableCell className="max-w-xs truncate">{group.group_description || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
@@ -416,8 +417,8 @@ export default function DepartmentsAndGroups() {
                 </TableBody>
               </Table>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
 
       <DepartmentDialog
