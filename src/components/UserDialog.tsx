@@ -35,7 +35,6 @@ const userSchema = z.object({
   last_name: z.string().min(1, 'Last name is required'),
   phone_number: z.string().optional(),
   ic_number: z.string().optional(),
-  role: z.enum(['admin', 'member']),
   position_name: z.string().optional(),
   department_id: z.string().optional(),
   group_id: z.string().optional(),
@@ -67,12 +66,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
     reset,
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: {
-      role: 'member',
-    },
   });
-
-  const selectedRole = watch('role');
 
   useEffect(() => {
     if (user) {
@@ -83,14 +77,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
       setValue('last_name', user.last_name || '');
       setValue('phone_number', user.phone_number || '');
       setValue('ic_number', user.ic_number || '');
-      setValue('role', user.role);
       setValue('position_name', user.position_name || '');
       setValue('department_id', user.department_id || '');
       setValue('group_id', user.group_id || '');
       setPhotoUrl(user.photo_url || null);
     } else {
       reset({
-        role: 'member',
         username: '',
         email: '',
         first_name: '',
@@ -178,7 +170,6 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             last_name: data.last_name,
             phone_number: data.phone_number || null,
             ic_number: data.ic_number || null,
-            role: data.role,
             position_name: data.position_name || null,
             department_id: data.department_id || null,
             group_id: data.group_id || null,
@@ -223,7 +214,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           last_name: data.last_name,
           phone_number: data.phone_number || null,
           ic_number: data.ic_number || null,
-          role: data.role,
+          role: 'member',
           position_name: data.position_name || null,
           department_id: data.department_id || null,
           group_id: data.group_id || null,
@@ -405,34 +396,13 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="role">Role *</Label>
-              <Select
-                value={selectedRole}
-                onValueChange={(value) => setValue('role', value as 'admin' | 'member')}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.role && (
-                <p className="text-sm text-destructive">{errors.role.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="position_name">Position</Label>
-              <Input
-                id="position_name"
-                {...register('position_name')}
-                placeholder="Job position"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="position_name">Position</Label>
+            <Input
+              id="position_name"
+              {...register('position_name')}
+              placeholder="Job position"
+            />
           </div>
 
           <SheetFooter>
