@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.archive-attendance]
 verify_jwt = false
+
+[functions.daily-attendance-reset]
+verify_jwt = false
