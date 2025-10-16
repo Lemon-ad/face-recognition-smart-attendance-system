@@ -57,23 +57,30 @@ export default function AttendanceHistory() {
       setLoading(true);
       
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Get start and end of selected date
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
-      // Fetch history records for selected date
-      const { data: historyRecords, error: historyError } = await supabase
-        .from('attendance_history')
-        .select('*')
-        .eq('attendance_date', dateStr)
+      // Fetch attendance records for selected date (not today)
+      const { data: attendanceRecords, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('attendance_id, user_id, check_in_time, check_out_time, status, location, created_at')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
         .order('check_in_time', { ascending: true });
 
-      if (historyError) throw historyError;
+      if (attendanceError) throw attendanceError;
 
-      if (!historyRecords || historyRecords.length === 0) {
+      if (!attendanceRecords || attendanceRecords.length === 0) {
         setHistoryData([]);
         return;
       }
 
       // Fetch user details for all records
-      const userIds = [...new Set(historyRecords.map(r => r.user_id))];
+      const userIds = [...new Set(attendanceRecords.map(r => r.user_id))];
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('user_id, first_name, last_name, username')
@@ -82,10 +89,19 @@ export default function AttendanceHistory() {
       if (usersError) throw usersError;
 
       // Map records with user data
-      const mappedData: HistoryWithUser[] = historyRecords.map(record => {
+      const mappedData: HistoryWithUser[] = attendanceRecords.map(record => {
         const user = users?.find(u => u.user_id === record.user_id);
         return {
-          record,
+          record: {
+            history_id: record.attendance_id,
+            user_id: record.user_id,
+            check_in_time: record.check_in_time,
+            check_out_time: record.check_out_time,
+            status: record.status,
+            location: record.location,
+            attendance_date: dateStr,
+            archived_at: record.created_at,
+          },
           user: user || null,
         };
       });
@@ -128,7 +144,7 @@ export default function AttendanceHistory() {
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Attendance History</h1>
-          <p className="text-muted-foreground mt-2">View archived attendance records</p>
+          <p className="text-muted-foreground mt-2">View past attendance records by date</p>
         </div>
 
         <Card>
@@ -175,7 +191,7 @@ export default function AttendanceHistory() {
                     <TableHead>Check Out</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Location</TableHead>
-                    <TableHead>Archived At</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -208,7 +224,7 @@ export default function AttendanceHistory() {
                         </TableCell>
                         <TableCell>{data.record.location || '-'}</TableCell>
                         <TableCell>
-                          {format(new Date(data.record.archived_at), 'MMM dd, yyyy HH:mm')}
+                          {format(selectedDate, 'MMM dd, yyyy')}
                         </TableCell>
                       </TableRow>
                     ))
