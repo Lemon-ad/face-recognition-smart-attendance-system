@@ -225,6 +225,23 @@ export default function AttendanceManagement() {
       : user.username || 'Unknown User';
   };
 
+  const handleStatusChange = async (attendanceId: string, newStatus: 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent') => {
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .update({ status: newStatus })
+        .eq('attendance_id', attendanceId);
+
+      if (error) throw error;
+
+      toast.success('Status updated successfully');
+      fetchAttendanceData();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Failed to update status');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -321,9 +338,25 @@ export default function AttendanceManagement() {
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(data.attendance?.status || 'absent')}>
-                            {data.attendance?.status || 'absent'}
-                          </Badge>
+                          {data.attendance ? (
+                            <Select
+                              value={data.attendance.status}
+                              onValueChange={(value) => handleStatusChange(data.attendance!.attendance_id, value as 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent')}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="present">Present</SelectItem>
+                                <SelectItem value="late">Late</SelectItem>
+                                <SelectItem value="early_out">Early Out</SelectItem>
+                                <SelectItem value="no_checkout">No Checkout</SelectItem>
+                                <SelectItem value="absent">Absent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant="destructive">Absent</Badge>
+                          )}
                         </TableCell>
                         <TableCell>{data.attendance?.location || '-'}</TableCell>
                       </TableRow>
