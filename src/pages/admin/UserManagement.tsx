@@ -28,10 +28,15 @@ import { useToast } from '@/hooks/use-toast';
 import { UserDialog } from '@/components/UserDialog';
 
 type User = Tables<'users'>;
+type Department = Tables<'department'>;
+
+interface UserWithDepartment extends User {
+  department?: Department;
+}
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserWithDepartment[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithDepartment[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -81,7 +86,10 @@ export default function UserManagement() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          department:department_id (*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -186,13 +194,14 @@ export default function UserManagement() {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Position</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="ml-3 text-muted-foreground">Loading users...</span>
@@ -201,7 +210,7 @@ export default function UserManagement() {
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     {searchQuery
                       ? 'No users found matching your search.'
                       : 'No users found. Click "Add User" to create the first user.'}
@@ -221,6 +230,7 @@ export default function UserManagement() {
                       </Badge>
                     </TableCell>
                     <TableCell>{user.position_name || 'N/A'}</TableCell>
+                    <TableCell>{user.department?.department_name || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
