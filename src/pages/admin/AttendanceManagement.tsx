@@ -16,8 +16,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { History } from 'lucide-react';
+import { History, FileDown } from 'lucide-react';
 import { AttendanceHistoryDialog } from '@/components/AttendanceHistoryDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface Department {
   department_id: string;
@@ -242,6 +251,77 @@ export default function AttendanceManagement() {
     }
   };
 
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text('Attendance Report', 14, 20);
+    
+    // Add date
+    doc.setFontSize(11);
+    doc.text(`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`, 14, 28);
+    
+    // Add filters info
+    const deptName = departments.find(d => d.department_id === selectedDepartment)?.department_name || 'All';
+    const groupName = selectedGroup === 'all' ? 'All Groups' : groups.find(g => g.group_id === selectedGroup)?.group_name || 'All';
+    doc.text(`Department: ${deptName} | Group: ${groupName}`, 14, 35);
+    
+    // Prepare table data
+    const tableData = attendanceData.map(data => [
+      getUserName(data.user),
+      data.attendance?.check_in_time ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm') : '-',
+      data.attendance?.check_out_time ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm') : '-',
+      data.attendance?.status || 'absent'
+    ]);
+    
+    // Add table
+    autoTable(doc, {
+      head: [['User', 'Check In', 'Check Out', 'Status']],
+      body: tableData,
+      startY: 42,
+      theme: 'grid',
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+    
+    // Save PDF
+    doc.save(`attendance-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast.success('PDF report generated successfully');
+  };
+
+  const generateExcel = () => {
+    // Prepare data
+    const deptName = departments.find(d => d.department_id === selectedDepartment)?.department_name || 'All';
+    const groupName = selectedGroup === 'all' ? 'All Groups' : groups.find(g => g.group_id === selectedGroup)?.group_name || 'All';
+    
+    const excelData = attendanceData.map(data => ({
+      'User': getUserName(data.user),
+      'Check In': data.attendance?.check_in_time ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm') : '-',
+      'Check Out': data.attendance?.check_out_time ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm') : '-',
+      'Status': data.attendance?.status || 'absent'
+    }));
+    
+    // Add header info
+    const headerData = [
+      ['Attendance Report'],
+      [`Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}`],
+      [`Department: ${deptName} | Group: ${groupName}`],
+      [] // Empty row
+    ];
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(headerData);
+    XLSX.utils.sheet_add_json(ws, excelData, { origin: 'A5' });
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+    
+    // Save file
+    XLSX.writeFile(wb, `attendance-report-${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast.success('Excel report generated successfully');
+  };
+
   return (
     <DashboardLayout>
       <div className="p-8">
@@ -254,13 +334,31 @@ export default function AttendanceManagement() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Attendance Records</CardTitle>
-              <Button
-                variant="outline"
-                onClick={() => setHistoryDialogOpen(true)}
-              >
-                <History className="h-4 w-4 mr-2" />
-                View History
-              </Button>
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={generatePDF}>
+                      Download as PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={generateExcel}>
+                      Download as Excel
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="outline"
+                  onClick={() => setHistoryDialogOpen(true)}
+                >
+                  <History className="h-4 w-4 mr-2" />
+                  View History
+                </Button>
+              </div>
             </div>
             <div className="flex gap-4 mt-4">
               <div className="flex-1">
