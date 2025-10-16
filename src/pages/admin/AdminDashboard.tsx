@@ -66,6 +66,18 @@ export default function AdminDashboard() {
     fetchAttendanceIssues();
   }, []);
 
+  // Compute Asia/Kuala_Lumpur day bounds in UTC
+  const getKLDayBounds = () => {
+    const now = new Date();
+    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const startKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 0, 0, 0, 0));
+    const endKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 23, 59, 59, 999));
+    return {
+      start: new Date(startKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
+      end: new Date(endKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
+    };
+  };
+
   const fetchDashboardData = async () => {
     // Total users (excluding admin)
     const { count: userCount } = await supabase
@@ -74,13 +86,13 @@ export default function AdminDashboard() {
       .neq('role', 'admin');
     setTotalUsers(userCount || 0);
 
-    // Present today (including late, early_out, no_checkout)
-    const today = new Date().toISOString().split('T')[0];
-    const { data: attendanceData, count: presentCount } = await supabase
+    // Present today based on KL timezone (UTC+8)
+    const { start, end } = getKLDayBounds();
+    const { count: presentCount } = await supabase
       .from('attendance')
-      .select('*', { count: 'exact' })
-      .gte('created_at', today)
-      .lt('created_at', `${today}T23:59:59`)
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', start)
+      .lt('created_at', end)
       .in('status', ['present', 'late', 'early_out', 'no_checkout']);
     
     const percentage = userCount ? ((presentCount || 0) / userCount) * 100 : 0;
@@ -95,7 +107,7 @@ export default function AdminDashboard() {
   };
 
   const fetchDepartmentAttendance = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const { start, end } = getKLDayBounds();
     const { data: depts } = await supabase.from('department').select('department_id, department_name');
     
     if (!depts) return;
@@ -106,8 +118,8 @@ export default function AdminDashboard() {
           .from('attendance')
           .select('*, users!inner(*)', { count: 'exact', head: true })
           .eq('users.department_id', dept.department_id)
-          .gte('created_at', today)
-          .lt('created_at', `${today}T23:59:59`)
+          .gte('created_at', start)
+          .lt('created_at', end)
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
         const { count: totalCount } = await supabase
@@ -128,7 +140,7 @@ export default function AdminDashboard() {
   };
 
   const fetchGroupAttendance = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const { start, end } = getKLDayBounds();
     let groupsToFetch = groups;
 
     if (selectedDeptForGroup !== 'all') {
@@ -141,8 +153,8 @@ export default function AdminDashboard() {
           .from('attendance')
           .select('*, users!inner(*)', { count: 'exact', head: true })
           .eq('users.group_id', group.group_id)
-          .gte('created_at', today)
-          .lt('created_at', `${today}T23:59:59`)
+          .gte('created_at', start)
+          .lt('created_at', end)
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
         const { count: totalCount } = await supabase

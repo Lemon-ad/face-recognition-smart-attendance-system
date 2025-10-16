@@ -157,6 +157,18 @@ export default function AttendanceManagement() {
     }
   };
 
+  // Compute Asia/Kuala_Lumpur day bounds in UTC
+  const getKLDayBounds = () => {
+    const now = new Date();
+    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const startKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 0, 0, 0, 0));
+    const endKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 23, 59, 59, 999));
+    return {
+      start: new Date(startKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
+      end: new Date(endKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
+    };
+  };
+
   const fetchAttendanceData = async () => {
     try {
       setLoading(true);
@@ -174,16 +186,15 @@ export default function AttendanceManagement() {
       const { data: users, error: usersError } = await usersQuery;
       if (usersError) throw usersError;
 
-      // Get today's date for attendance filtering
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStr = today.toISOString();
+      // Get today's date in KL timezone bounds
+      const { start, end } = getKLDayBounds();
 
       // Fetch attendance records for today
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
-        .gte('created_at', todayStr);
+        .gte('created_at', start)
+        .lt('created_at', end);
 
       if (attendanceError) throw attendanceError;
 
