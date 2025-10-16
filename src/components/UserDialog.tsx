@@ -269,9 +269,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-6">
           {/* Profile Photo Upload */}
-          <div className="flex flex-col items-center space-y-4 pb-4 border-b">
+          <div className="flex flex-col items-center space-y-4 pb-6 border-b">
             <Avatar className="h-24 w-24">
               {photoUrl ? (
                 <AvatarImage src={photoUrl} alt="Profile photo" />
@@ -312,138 +312,154 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username *</Label>
-              <Input
-                id="username"
-                {...register('username')}
-                placeholder="Enter username"
-              />
-              {errors.username && (
-                <p className="text-sm text-destructive">{errors.username.message}</p>
-              )}
+          {/* Account Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Account Information</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username *</Label>
+                <Input
+                  id="username"
+                  {...register('username')}
+                  placeholder="Enter username"
+                />
+                {errors.username && (
+                  <p className="text-sm text-destructive">{errors.username.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                  placeholder="user@example.com"
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register('email')}
-                placeholder="user@example.com"
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
+            {!isEdit && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...register('password')}
+                  placeholder="Minimum 6 characters"
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>
+            
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">First Name *</Label>
+                <Input
+                  id="first_name"
+                  {...register('first_name')}
+                  placeholder="First name"
+                />
+                {errors.first_name && (
+                  <p className="text-sm text-destructive">{errors.first_name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="middle_name">Middle Name</Label>
+                <Input
+                  id="middle_name"
+                  {...register('middle_name')}
+                  placeholder="Middle name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Last Name *</Label>
+                <Input
+                  id="last_name"
+                  {...register('last_name')}
+                  placeholder="Last name"
+                />
+                {errors.last_name && (
+                  <p className="text-sm text-destructive">{errors.last_name.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone_number">Phone Number</Label>
+                <Input
+                  id="phone_number"
+                  {...register('phone_number')}
+                  placeholder="+60123456789"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ic_number">IC Number</Label>
+                <Input
+                  id="ic_number"
+                  {...register('ic_number')}
+                  placeholder="IC Number"
+                />
+              </div>
             </div>
           </div>
 
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                {...register('password')}
-                placeholder="Minimum 6 characters"
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-          )}
+          {/* Employment Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Employment Information</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="position_name">Position</Label>
+                <Input
+                  id="position_name"
+                  {...register('position_name')}
+                  placeholder="Job position"
+                />
+              </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">First Name *</Label>
-              <Input
-                id="first_name"
-                {...register('first_name')}
-                placeholder="First name"
-              />
-              {errors.first_name && (
-                <p className="text-sm text-destructive">{errors.first_name.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="middle_name">Middle Name</Label>
-              <Input
-                id="middle_name"
-                {...register('middle_name')}
-                placeholder="Middle name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="last_name">Last Name *</Label>
-              <Input
-                id="last_name"
-                {...register('last_name')}
-                placeholder="Last name"
-              />
-              {errors.last_name && (
-                <p className="text-sm text-destructive">{errors.last_name.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                {...register('phone_number')}
-                placeholder="+60123456789"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ic_number">IC Number</Label>
-              <Input
-                id="ic_number"
-                {...register('ic_number')}
-                placeholder="IC Number"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="position_name">Position</Label>
-              <Input
-                id="position_name"
-                {...register('position_name')}
-                placeholder="Job position"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="date_of_joining">Date of Joining</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !watch('date_of_joining') && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {watch('date_of_joining') ? format(watch('date_of_joining'), "PPP") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={watch('date_of_joining')}
-                    onSelect={(date) => setValue('date_of_joining', date)}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              <div className="space-y-2">
+                <Label htmlFor="date_of_joining">Date of Joining</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !watch('date_of_joining') && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {watch('date_of_joining') ? format(watch('date_of_joining'), "PPP") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={watch('date_of_joining')}
+                      onSelect={(date) => setValue('date_of_joining', date)}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 
