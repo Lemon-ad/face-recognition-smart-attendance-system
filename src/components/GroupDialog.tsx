@@ -35,7 +35,6 @@ type Department = Tables<'department'>;
 
 const formSchema = z.object({
   group_name: z.string().min(1, 'Group name is required'),
-  department_id: z.string().min(1, 'Department is required'),
   group_location: z.string().optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
@@ -46,6 +45,7 @@ interface GroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   group: Group | null;
+  departmentId: string | null;
   onSuccess: () => void;
 }
 
@@ -53,16 +53,15 @@ export function GroupDialog({
   open,
   onOpenChange,
   group,
+  departmentId,
   onSuccess,
 }: GroupDialogProps) {
   const { toast } = useToast();
-  const [departments, setDepartments] = useState<Department[]>([]);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       group_name: '',
-      department_id: '',
       group_location: '',
       start_time: '',
       end_time: '',
@@ -71,14 +70,9 @@ export function GroupDialog({
   });
 
   useEffect(() => {
-    fetchDepartments();
-  }, []);
-
-  useEffect(() => {
     if (group) {
       form.reset({
         group_name: group.group_name || '',
-        department_id: group.department_id || '',
         group_location: group.group_location || '',
         start_time: group.start_time || '',
         end_time: group.end_time || '',
@@ -87,7 +81,6 @@ export function GroupDialog({
     } else {
       form.reset({
         group_name: '',
-        department_id: '',
         group_location: '',
         start_time: '',
         end_time: '',
@@ -96,33 +89,22 @@ export function GroupDialog({
     }
   }, [group, form, open]);
 
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('department')
-        .select('*')
-        .order('department_name');
-
-      if (error) throw error;
-      setDepartments(data || []);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    if (!departmentId) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to fetch departments',
+        description: 'Department is required',
       });
+      return;
     }
-  };
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       if (group) {
         const { error } = await supabase
           .from('group')
           .update({
             group_name: data.group_name,
-            department_id: data.department_id,
             group_location: data.group_location || null,
             start_time: data.start_time || null,
             end_time: data.end_time || null,
@@ -139,7 +121,7 @@ export function GroupDialog({
       } else {
         const { error } = await supabase.from('group').insert({
           group_name: data.group_name,
-          department_id: data.department_id,
+          department_id: departmentId,
           group_location: data.group_location || null,
           start_time: data.start_time || null,
           end_time: data.end_time || null,
@@ -187,31 +169,6 @@ export function GroupDialog({
                   <FormControl>
                     <Input placeholder="Enter group name" {...field} />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="department_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Department *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a department" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.department_id} value={dept.department_id}>
-                          {dept.department_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

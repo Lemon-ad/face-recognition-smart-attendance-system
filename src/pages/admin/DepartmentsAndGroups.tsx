@@ -449,6 +449,7 @@ export default function DepartmentsAndGroups() {
         open={groupDialogOpen}
         onOpenChange={setGroupDialogOpen}
         group={selectedGroup}
+        departmentId={selectedDepartmentId}
         onSuccess={fetchGroups}
       />
 

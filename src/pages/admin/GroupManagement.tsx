@@ -252,6 +252,7 @@ export default function GroupManagement() {
         open={groupDialogOpen}
         onOpenChange={setGroupDialogOpen}
         group={selectedGroup}
+        departmentId={selectedGroup?.department_id || null}
         onSuccess={fetchGroups}
       />
 
