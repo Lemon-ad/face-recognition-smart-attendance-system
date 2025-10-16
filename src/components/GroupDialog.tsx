@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { LocationMapPicker } from './LocationMapPicker';
 
 type Group = Tables<'group'>;
 type Department = Tables<'department'>;
@@ -58,6 +59,12 @@ export function GroupDialog({
   onSuccess,
 }: GroupDialogProps) {
   const { toast } = useToast();
+  const [departmentDefaults, setDepartmentDefaults] = useState<{
+    department_location: string | null;
+    geofence_radius: number | null;
+    start_time: string | null;
+    end_time: string | null;
+  } | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,6 +78,25 @@ export function GroupDialog({
     },
   });
 
+  // Fetch department defaults when creating a new group
+  useEffect(() => {
+    const fetchDepartmentDefaults = async () => {
+      if (departmentId && !group) {
+        const { data } = await supabase
+          .from('department')
+          .select('department_location, geofence_radius, start_time, end_time')
+          .eq('department_id', departmentId)
+          .maybeSingle();
+        
+        if (data) {
+          setDepartmentDefaults(data);
+        }
+      }
+    };
+    
+    fetchDepartmentDefaults();
+  }, [departmentId, group]);
+
   useEffect(() => {
     if (group) {
       form.reset({
@@ -80,6 +106,16 @@ export function GroupDialog({
         start_time: group.start_time || '',
         end_time: group.end_time || '',
         group_description: group.group_description || '',
+      });
+    } else if (departmentDefaults) {
+      // Pre-fill with department defaults when creating new group
+      form.reset({
+        group_name: '',
+        group_location: departmentDefaults.department_location || '',
+        geofence_radius: departmentDefaults.geofence_radius || 500,
+        start_time: departmentDefaults.start_time || '',
+        end_time: departmentDefaults.end_time || '',
+        group_description: '',
       });
     } else {
       form.reset({
@@ -91,7 +127,7 @@ export function GroupDialog({
         group_description: '',
       });
     }
-  }, [group, form, open]);
+  }, [group, form, open, departmentDefaults]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!departmentId) {
@@ -185,9 +221,12 @@ export function GroupDialog({
               name="group_location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Location (Click on map to select)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter location" {...field} />
+                    <LocationMapPicker
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

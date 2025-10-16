@@ -123,20 +123,26 @@ serve(async (req) => {
             }
           }
           
-          // Override with group times and geofence if user has a group
+          // Override with group settings (location, times, geofence) if user has a group
           if (user.group_id) {
             const { data: groupData } = await supabase
               .from('group')
-              .select('start_time, end_time, geofence_radius')
+              .select('start_time, end_time, group_location, geofence_radius')
               .eq('group_id', user.group_id)
               .single();
             
+            // Group location takes priority
+            if (groupData?.group_location) {
+              departmentLocation = groupData.group_location;
+            }
+            
+            // Group times take priority
             if (groupData?.start_time) {
               startTime = groupData.start_time;
               endTime = groupData.end_time;
             }
             
-            // Override geofence radius if group has one
+            // Group geofence radius takes priority
             if (groupData?.geofence_radius) {
               geofenceRadius = groupData.geofence_radius;
             }
