@@ -27,6 +27,8 @@ import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { DepartmentDialog } from '@/components/DepartmentDialog';
 import { GroupDialog } from '@/components/GroupDialog';
+import { AddDepartmentMembersDialog } from '@/components/AddDepartmentMembersDialog';
+import { Users } from 'lucide-react';
 
 type Department = Tables<'department'>;
 type Group = Tables<'group'>;
@@ -48,6 +50,8 @@ export default function DepartmentsAndGroups() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
+  const [addMembersDialogOpen, setAddMembersDialogOpen] = useState(false);
+  const [departmentForMembers, setDepartmentForMembers] = useState<Department | null>(null);
   
   const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<GroupWithDepartment | null>(null);
@@ -288,6 +292,17 @@ export default function DepartmentsAndGroups() {
                               variant="ghost"
                               size="sm"
                               onClick={() => {
+                                setDepartmentForMembers(dept);
+                                setAddMembersDialogOpen(true);
+                              }}
+                              title="Add Members"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
                                 setSelectedDepartment(dept);
                                 setDepartmentDialogOpen(true);
                               }}
@@ -435,6 +450,13 @@ export default function DepartmentsAndGroups() {
         onOpenChange={setGroupDialogOpen}
         group={selectedGroup}
         onSuccess={fetchGroups}
+      />
+
+      <AddDepartmentMembersDialog
+        open={addMembersDialogOpen}
+        onOpenChange={setAddMembersDialogOpen}
+        department={departmentForMembers}
+        onSuccess={fetchDepartments}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
