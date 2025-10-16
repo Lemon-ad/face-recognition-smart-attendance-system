@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -197,13 +198,14 @@ export default function UserManagement() {
                 <TableHead>Email</TableHead>
                 <TableHead>Position</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Date of Joining</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                       <span className="ml-3 text-muted-foreground">Loading users...</span>
@@ -212,7 +214,7 @@ export default function UserManagement() {
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     {searchQuery
                       ? 'No users found matching your search.'
                       : 'No users found. Click "Add User" to create the first user.'}
@@ -226,6 +228,9 @@ export default function UserManagement() {
                     <TableCell>{user.email || 'N/A'}</TableCell>
                     <TableCell>{user.position_name || 'N/A'}</TableCell>
                     <TableCell>{user.department?.department_name || 'N/A'}</TableCell>
+                    <TableCell>
+                      {user.date_of_joining ? format(new Date(user.date_of_joining), 'MMM dd, yyyy') : 'N/A'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
