@@ -73,6 +73,18 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
 
   const handleClose = () => {
     stopCamera();
+    
+    // Clear canvas
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+    
+    // Reset processing state
+    setIsProcessing(false);
+    
     onOpenChange(false);
   };
 
