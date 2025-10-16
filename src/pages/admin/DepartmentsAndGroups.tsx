@@ -222,8 +222,8 @@ export default function DepartmentsAndGroups() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Side - Departments */}
+        <div className="grid grid-cols-2 gap-6 divide-x divide-border">
+          <div className="pr-6">{/* Divider wrapper for departments */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">Departments</h2>
@@ -315,8 +315,9 @@ export default function DepartmentsAndGroups() {
               </Table>
             </div>
           </div>
+          </div>{/* End divider wrapper for departments */}
 
-          {/* Right Side - Groups */}
+          <div className="pl-6">{/* Divider wrapper for groups */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">
@@ -418,6 +419,7 @@ export default function DepartmentsAndGroups() {
               </Table>
             </div>
           </div>
+          </div>{/* End divider wrapper for groups */}
         </div>
       </div>
 
