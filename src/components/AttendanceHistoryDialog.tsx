@@ -30,19 +30,18 @@ interface User {
   username: string | null;
 }
 
-interface HistoryRecord {
-  history_id: string;
+interface AttendanceRecord {
+  attendance_id: string;
   user_id: string;
   check_in_time: string | null;
   check_out_time: string | null;
   status: string;
   location: string | null;
-  attendance_date: string;
-  archived_at: string;
+  created_at: string;
 }
 
 interface HistoryWithUser {
-  record: HistoryRecord;
+  record: AttendanceRecord;
   user: User | null;
 }
 
@@ -66,22 +65,38 @@ export function AttendanceHistoryDialog({ open, onOpenChange }: AttendanceHistor
     try {
       setLoading(true);
       
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      // Get start and end of selected date
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
 
-      const { data: historyRecords, error: historyError } = await supabase
-        .from('attendance_history')
-        .select('*')
-        .eq('attendance_date', dateStr)
+      // Get start of today to filter out today's records
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Fetch attendance records for selected date (only if it's before today)
+      if (selectedDate >= today) {
+        setHistoryData([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: attendanceRecords, error: attendanceError } = await supabase
+        .from('attendance')
+        .select('attendance_id, user_id, check_in_time, check_out_time, status, location, created_at')
+        .gte('created_at', startOfDay.toISOString())
+        .lt('created_at', endOfDay.toISOString())
         .order('check_in_time', { ascending: true });
 
-      if (historyError) throw historyError;
+      if (attendanceError) throw attendanceError;
 
-      if (!historyRecords || historyRecords.length === 0) {
+      if (!attendanceRecords || attendanceRecords.length === 0) {
         setHistoryData([]);
         return;
       }
 
-      const userIds = [...new Set(historyRecords.map(r => r.user_id))];
+      const userIds = [...new Set(attendanceRecords.map(r => r.user_id))];
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('user_id, first_name, last_name, username')
@@ -89,7 +104,7 @@ export function AttendanceHistoryDialog({ open, onOpenChange }: AttendanceHistor
 
       if (usersError) throw usersError;
 
-      const mappedData: HistoryWithUser[] = historyRecords.map(record => {
+      const mappedData: HistoryWithUser[] = attendanceRecords.map(record => {
         const user = users?.find(u => u.user_id === record.user_id);
         return {
           record,
@@ -178,19 +193,21 @@ export function AttendanceHistoryDialog({ open, onOpenChange }: AttendanceHistor
                   <TableHead>Check Out</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Archived At</TableHead>
+                  <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {historyData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No attendance history found for this date
+                      {selectedDate >= new Date(new Date().setHours(0, 0, 0, 0))
+                        ? 'Please select a past date to view history'
+                        : 'No attendance records found for this date'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   historyData.map((data) => (
-                    <TableRow key={data.record.history_id}>
+                    <TableRow key={data.record.attendance_id}>
                       <TableCell className="font-medium">
                         {getUserName(data.user)}
                       </TableCell>
@@ -211,7 +228,7 @@ export function AttendanceHistoryDialog({ open, onOpenChange }: AttendanceHistor
                       </TableCell>
                       <TableCell>{data.record.location || '-'}</TableCell>
                       <TableCell>
-                        {format(new Date(data.record.archived_at), 'MMM dd, yyyy HH:mm')}
+                        {format(new Date(data.record.created_at), 'MMM dd, yyyy')}
                       </TableCell>
                     </TableRow>
                   ))
