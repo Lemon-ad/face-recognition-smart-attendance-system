@@ -77,9 +77,7 @@ export default function AttendanceManagement() {
 
       if (error) throw error;
       setDepartments(data || []);
-      if (data && data.length > 0) {
-        setSelectedDepartment(data[0].department_id);
-      }
+      setSelectedDepartment('all');
     } catch (error) {
       console.error('Error fetching departments:', error);
       toast.error('Failed to load departments');
@@ -88,11 +86,15 @@ export default function AttendanceManagement() {
 
   const fetchGroups = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('group')
-        .select('group_id, group_name, start_time, department_id')
-        .eq('department_id', selectedDepartment)
-        .order('group_name');
+        .select('group_id, group_name, start_time, department_id');
+      
+      if (selectedDepartment !== 'all') {
+        query = query.eq('department_id', selectedDepartment);
+      }
+      
+      const { data, error } = await query.order('group_name');
 
       if (error) throw error;
       setGroups(data || []);
@@ -109,8 +111,11 @@ export default function AttendanceManagement() {
       // Build query for users
       let usersQuery = supabase
         .from('users')
-        .select('user_id, first_name, last_name, username, group_id, department_id')
-        .eq('department_id', selectedDepartment);
+        .select('user_id, first_name, last_name, username, group_id, department_id');
+      
+      if (selectedDepartment !== 'all') {
+        usersQuery = usersQuery.eq('department_id', selectedDepartment);
+      }
 
       if (selectedGroup !== 'all') {
         usersQuery = usersQuery.eq('group_id', selectedGroup);
@@ -218,6 +223,7 @@ export default function AttendanceManagement() {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept.department_id} value={dept.department_id}>
                         {dept.department_name}
