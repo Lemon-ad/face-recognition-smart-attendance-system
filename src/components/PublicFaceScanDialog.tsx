@@ -141,7 +141,9 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       }
 
       if (compareData.matched) {
-        toast.success(`Attendance taken successfully, hello ${compareData.user.name}!`, {
+        const statusText = compareData.status === 'present' ? 'on time' : 
+                          compareData.status === 'late' ? 'late' : 'marked';
+        toast.success(`Attendance marked ${statusText}, welcome ${compareData.user.username || compareData.user.name}!`, {
           duration: 5000,
         });
         handleClose();

@@ -36,10 +36,10 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Fetch all users with photo_url
+    // Fetch all users with photo_url along with their group and department info
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('user_id, first_name, middle_name, last_name, photo_url')
+      .select('user_id, first_name, middle_name, last_name, photo_url, username, group_id, department_id')
       .not('photo_url', 'is', null);
 
     if (usersError) {
@@ -93,13 +93,96 @@ serve(async (req) => {
             .filter(Boolean)
             .join(' ');
 
+          // Get group and department info to determine start_time
+          let startTime = null;
+          
+          // First, try to get group start_time if user has a group
+          if (user.group_id) {
+            const { data: groupData } = await supabase
+              .from('group')
+              .select('start_time')
+              .eq('group_id', user.group_id)
+              .single();
+            
+            if (groupData?.start_time) {
+              startTime = groupData.start_time;
+            }
+          }
+          
+          // If no group start_time, fall back to department start_time
+          if (!startTime && user.department_id) {
+            const { data: deptData } = await supabase
+              .from('department')
+              .select('start_time')
+              .eq('department_id', user.department_id)
+              .single();
+            
+            if (deptData?.start_time) {
+              startTime = deptData.start_time;
+            }
+          }
+
+          // Create attendance record
+          const checkInTime = new Date();
+          let status = 'absent'; // Default status
+
+          if (startTime) {
+            // Parse start_time (format: HH:MM:SS or HH:MM)
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const startDateTime = new Date(checkInTime);
+            startDateTime.setHours(hours, minutes, 0, 0);
+
+            // Determine status based on check-in time
+            if (checkInTime <= startDateTime) {
+              status = 'present';
+            } else {
+              status = 'late';
+            }
+          } else {
+            // If no start_time found, default to present
+            status = 'present';
+          }
+
+          // Check if attendance already exists today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const { data: existingAttendance } = await supabase
+            .from('attendance')
+            .select('attendance_id')
+            .eq('user_id', user.user_id)
+            .gte('created_at', today.toISOString())
+            .single();
+
+          if (existingAttendance) {
+            // Update existing attendance
+            await supabase
+              .from('attendance')
+              .update({
+                check_in_time: checkInTime.toISOString(),
+                status: status,
+              })
+              .eq('attendance_id', existingAttendance.attendance_id);
+          } else {
+            // Create new attendance record
+            await supabase
+              .from('attendance')
+              .insert({
+                user_id: user.user_id,
+                check_in_time: checkInTime.toISOString(),
+                status: status,
+              });
+          }
+
           return new Response(
             JSON.stringify({
               matched: true,
               user: {
                 user_id: user.user_id,
                 name: fullName,
+                username: user.username,
               },
+              status: status,
               confidence: compareResult.confidence,
             }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
