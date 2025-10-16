@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,9 +14,20 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFaceScan, setShowFaceScan] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, user, userRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Redirect to appropriate dashboard when user logs in
+  useEffect(() => {
+    if (user && userRole) {
+      if (userRole === 'admin') {
+        navigate('/admin');
+      } else if (userRole === 'member') {
+        navigate('/member');
+      }
+    }
+  }, [user, userRole, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +47,7 @@ export default function Auth() {
         title: 'Login Successful',
         description: 'Redirecting to dashboard...',
       });
-      // Navigation is handled by the auth context based on role
-      navigate('/');
+      // Navigation happens in useEffect when userRole is set
     }
   };
 
