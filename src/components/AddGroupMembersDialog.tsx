@@ -7,6 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -15,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
 type User = Tables<'users'>;
 type Group = Tables<'group'>;
@@ -35,6 +43,8 @@ export function AddGroupMembersDialog({
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'in' | 'not-in'>('all');
+  const [highlightedUserIds, setHighlightedUserIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -44,6 +54,8 @@ export function AddGroupMembersDialog({
     } else {
       setSelectedUserIds([]);
       setSearchQuery('');
+      setFilterStatus('all');
+      setHighlightedUserIds([]);
     }
   }, [open, group]);
 
@@ -78,8 +90,24 @@ export function AddGroupMembersDialog({
     );
   };
 
-  const handleSubmit = async () => {
+  const handleAddMembers = async () => {
     if (!group || selectedUserIds.length === 0) return;
+
+    // Check if any selected users are already in the group
+    const alreadyInGroup = users.filter(
+      u => selectedUserIds.includes(u.user_id) && u.group_id === group.group_id
+    );
+
+    if (alreadyInGroup.length > 0) {
+      const userIds = alreadyInGroup.map(u => u.user_id);
+      setHighlightedUserIds(userIds);
+      toast({
+        variant: 'destructive',
+        title: 'Members already exist',
+        description: `${alreadyInGroup.length} selected user(s) are already in this group`,
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -109,7 +137,59 @@ export function AddGroupMembersDialog({
     }
   };
 
+  const handleRemoveMembers = async () => {
+    if (!group || selectedUserIds.length === 0) return;
+
+    // Check if any selected users are not in the group
+    const notInGroup = users.filter(
+      u => selectedUserIds.includes(u.user_id) && u.group_id !== group.group_id
+    );
+
+    if (notInGroup.length > 0) {
+      const userIds = notInGroup.map(u => u.user_id);
+      setHighlightedUserIds(userIds);
+      toast({
+        variant: 'destructive',
+        title: 'Members not in group',
+        description: `${notInGroup.length} selected user(s) are not in this group`,
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ group_id: null })
+        .in('user_id', selectedUserIds);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `${selectedUserIds.length} user(s) removed from group`,
+      });
+
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error removing users from group:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to remove users from group',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
+    // Filter by status
+    if (filterStatus === 'in' && user.group_id !== group?.group_id) return false;
+    if (filterStatus === 'not-in' && user.group_id === group?.group_id) return false;
+
+    // Filter by search query
     const searchLower = searchQuery.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.middle_name || ''} ${user.last_name || ''}`.toLowerCase();
     return (
@@ -130,6 +210,20 @@ export function AddGroupMembersDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Filter Members</Label>
+            <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                <SelectItem value="in">Already in Group</SelectItem>
+                <SelectItem value="not-in">Not in Group</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -150,7 +244,9 @@ export function AddGroupMembersDialog({
                 filteredUsers.map((user) => (
                   <div
                     key={user.user_id}
-                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    className={`flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer ${
+                      highlightedUserIds.includes(user.user_id) ? 'bg-destructive/10 border-2 border-destructive' : ''
+                    }`}
                     onClick={() => handleToggleUser(user.user_id)}
                   >
                     <Checkbox
@@ -185,7 +281,14 @@ export function AddGroupMembersDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || selectedUserIds.length === 0}>
+          <Button 
+            variant="destructive" 
+            onClick={handleRemoveMembers} 
+            disabled={loading || selectedUserIds.length === 0}
+          >
+            {loading ? 'Removing...' : 'Remove Members'}
+          </Button>
+          <Button onClick={handleAddMembers} disabled={loading || selectedUserIds.length === 0}>
             {loading ? 'Adding...' : 'Add Members'}
           </Button>
         </DialogFooter>
