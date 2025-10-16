@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { LocationMapPicker } from './LocationMapPicker';
 
 type Department = Tables<'department'>;
 
@@ -158,9 +159,12 @@ export function DepartmentDialog({
               name="department_location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Location (Click on map to select)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter location" {...field} />
+                    <LocationMapPicker
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
