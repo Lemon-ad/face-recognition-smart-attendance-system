@@ -117,26 +117,29 @@ export default function UserManagement() {
     if (!selectedUser) return;
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('user_id', selectedUser.user_id);
+      // Call edge function to delete both user record and auth account
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: selectedUser.user_id },
+      });
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'User deleted successfully',
+        description: 'User and authentication account deleted successfully',
       });
 
       setDeleteDialogOpen(false);
       setSelectedUser(null);
+      
+      // Refresh the users list
+      await fetchUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete user',
+        description: error instanceof Error ? error.message : 'Failed to delete user',
       });
     }
   };
