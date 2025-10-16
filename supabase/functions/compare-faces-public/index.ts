@@ -122,23 +122,28 @@ serve(async (req) => {
             }
           }
 
-          // Create attendance record
+          // Create attendance record using Malaysia/Kuala Lumpur timezone (UTC+8)
           const checkInTime = new Date();
+          const klOffset = 8 * 60; // Kuala Lumpur is UTC+8
+          const klTime = new Date(checkInTime.getTime() + (klOffset * 60 * 1000));
+          
           let status = 'absent'; // Default status
 
           if (startTime) {
-            // Parse start_time (format: HH:MM:SS or HH:MM)
+            // Parse start_time (format: HH:MM:SS or HH:MM) - this is in KL time
             const [hours, minutes] = startTime.split(':').map(Number);
-            const startDateTime = new Date(checkInTime);
+            
+            // Create a date object for today's start time in KL timezone
+            const startDateTime = new Date(klTime);
             startDateTime.setHours(hours, minutes, 0, 0);
 
-            console.log('Check-in time:', checkInTime.toISOString());
-            console.log('Start time:', startDateTime.toISOString());
+            console.log('Check-in time (KL):', klTime.toISOString(), 'Local:', klTime.toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
+            console.log('Start time (KL):', startDateTime.toISOString(), 'Local:', startDateTime.toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
             console.log('Start time string:', startTime);
-            console.log('Check-in <= Start?', checkInTime <= startDateTime);
+            console.log('Check-in <= Start?', klTime <= startDateTime);
 
-            // Determine status based on check-in time
-            if (checkInTime <= startDateTime) {
+            // Determine status based on check-in time in KL timezone
+            if (klTime <= startDateTime) {
               status = 'present';
             } else {
               status = 'late';
