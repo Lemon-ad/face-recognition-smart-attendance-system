@@ -9,7 +9,8 @@ import {
   FileText, 
   ClipboardList,
   LogOut,
-  User
+  User,
+  History
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -25,6 +26,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { to: '/admin/users', icon: Users, label: 'User Management' },
     { to: '/admin/departments', icon: Building2, label: 'Departments & Groups' },
     { to: '/admin/attendance', icon: ClipboardList, label: 'Attendance' },
+    { to: '/admin/attendance-history', icon: History, label: 'History' },
     { to: '/admin/reports', icon: FileText, label: 'Reports' },
   ];
 

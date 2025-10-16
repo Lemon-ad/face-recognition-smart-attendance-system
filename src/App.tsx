@@ -10,6 +10,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentsAndGroups from "./pages/admin/DepartmentsAndGroups";
 import AttendanceManagement from "./pages/admin/AttendanceManagement";
+import AttendanceHistory from "./pages/admin/AttendanceHistory";
 import MemberDashboard from "./pages/member/MemberDashboard";
 import MemberProfile from "./pages/member/MemberProfile";
 import NotFound from "./pages/NotFound";
@@ -57,6 +58,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireRole="admin">
                   <AttendanceManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/attendance-history"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AttendanceHistory />
                 </ProtectedRoute>
               }
             />
