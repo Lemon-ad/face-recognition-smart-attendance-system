@@ -85,6 +85,28 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
     setIsProcessing(true);
 
     try {
+      // Get device location first
+      let userLocation: { longitude: number; latitude: number } | null = null;
+      
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          });
+        });
+        
+        userLocation = {
+          longitude: position.coords.longitude,
+          latitude: position.coords.latitude
+        };
+      } catch (geoError) {
+        toast.error('Location access required for check-in. Please enable location services.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Capture image from video
       const canvas = canvasRef.current;
       const video = videoRef.current;
@@ -128,7 +150,8 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         'compare-faces-public',
         {
           body: { 
-            capturedImageUrl: uploadData.url
+            capturedImageUrl: uploadData.url,
+            userLocation: userLocation
           },
         }
       );
@@ -150,6 +173,8 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
             message += ' - You\'re on time! ✓';
           } else if (compareData.status === 'late') {
             message += ' - Marked as late';
+          } else if (compareData.status === 'absent') {
+            message += ' - Location mismatch. Check-in not recorded.';
           }
         }
         
@@ -158,7 +183,7 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         });
         handleClose();
       } else {
-        toast.error('User not found', {
+        toast.error(compareData.message || 'User not found', {
           duration: 5000,
         });
       }

@@ -12,11 +12,18 @@ serve(async (req) => {
   }
 
   try {
-    const { capturedImageUrl } = await req.json();
+    const { capturedImageUrl, userLocation } = await req.json();
 
     if (!capturedImageUrl) {
       return new Response(
         JSON.stringify({ error: 'No image URL provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!userLocation || !userLocation.longitude || !userLocation.latitude) {
+      return new Response(
+        JSON.stringify({ error: 'Location data required for check-in' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -93,11 +100,27 @@ serve(async (req) => {
             .filter(Boolean)
             .join(' ');
 
-          // Get group and department info to determine start_time and end_time
+           // Get group and department info to determine start_time, end_time, and location
           let startTime = null;
           let endTime = null;
+          let departmentLocation = null;
           
-          // First, try to get group start_time and end_time if user has a group
+          // Get department location and times
+          if (user.department_id) {
+            const { data: deptData } = await supabase
+              .from('department')
+              .select('start_time, end_time, department_location')
+              .eq('department_id', user.department_id)
+              .single();
+            
+            if (deptData) {
+              departmentLocation = deptData.department_location;
+              startTime = deptData.start_time;
+              endTime = deptData.end_time;
+            }
+          }
+          
+          // Override with group times if user has a group
           if (user.group_id) {
             const { data: groupData } = await supabase
               .from('group')
@@ -110,19 +133,33 @@ serve(async (req) => {
               endTime = groupData.end_time;
             }
           }
-          
-          // If no group start_time, fall back to department start_time and end_time
-          if (!startTime && user.department_id) {
-            const { data: deptData } = await supabase
-              .from('department')
-              .select('start_time, end_time')
-              .eq('department_id', user.department_id)
-              .single();
+
+          // Validate location if department has a location set
+          let locationMatches = true;
+          if (departmentLocation) {
+            const [deptLng, deptLat] = departmentLocation.split(',').map(Number);
             
-            if (deptData?.start_time) {
-              startTime = deptData.start_time;
-              endTime = deptData.end_time;
-            }
+            // Calculate distance using Haversine formula
+            const toRad = (value: number) => (value * Math.PI) / 180;
+            const R = 6371000; // Earth's radius in meters
+            const dLat = toRad(userLocation.latitude - deptLat);
+            const dLng = toRad(userLocation.longitude - deptLng);
+            const a = 
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(deptLat)) * Math.cos(toRad(userLocation.latitude)) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c;
+            
+            // Allow 100 meters tolerance
+            locationMatches = distance <= 100;
+            
+            console.log('Location validation:', {
+              userLocation,
+              departmentLocation: { lng: deptLng, lat: deptLat },
+              distance: `${distance.toFixed(2)}m`,
+              matches: locationMatches
+            });
           }
 
           // Create attendance record using Malaysia/Kuala Lumpur timezone (UTC+8)
@@ -208,13 +245,34 @@ serve(async (req) => {
               { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           } else {
-            // First scan of the day - create new attendance record with check_in_time
+            // First scan of the day
+            // Only record check-in if location matches
+            if (!locationMatches) {
+              return new Response(
+                JSON.stringify({
+                  matched: true,
+                  user: {
+                    user_id: user.user_id,
+                    name: fullName,
+                    username: user.username,
+                  },
+                  action: 'check_in',
+                  status: 'absent',
+                  message: 'Location mismatch - you are not at the department location',
+                  confidence: compareResult.confidence,
+                }),
+                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            // Location matches - create new attendance record with check_in_time
             await supabase
               .from('attendance')
               .insert({
                 user_id: user.user_id,
                 check_in_time: klTime.toISOString(),
                 status: status,
+                location: `${userLocation.longitude},${userLocation.latitude}`
               });
 
             return new Response(
