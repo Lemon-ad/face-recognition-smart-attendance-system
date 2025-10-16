@@ -68,6 +68,31 @@ export default function AttendanceManagement() {
     }
   }, [selectedDepartment, selectedGroup]);
 
+  // Set up real-time subscription for attendance changes
+  useEffect(() => {
+    if (!selectedDepartment) return;
+
+    const channel = supabase
+      .channel('attendance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance'
+        },
+        () => {
+          // Refresh attendance data when any change occurs
+          fetchAttendanceData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDepartment, selectedGroup]);
+
   const fetchDepartments = async () => {
     try {
       const { data, error } = await supabase
