@@ -446,7 +446,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {watch('date_of_joining') ? format(watch('date_of_joining'), "PPP") : "Select date"}
+                      {watch('date_of_joining') ? format(watch('date_of_joining'), "dd/MM/yyyy") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
