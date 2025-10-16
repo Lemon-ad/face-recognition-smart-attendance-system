@@ -258,14 +258,13 @@ export default function DepartmentsAndGroups() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Department Name</TableHead>
-                    <TableHead>Location</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12">
+                      <TableCell colSpan={2} className="text-center py-12">
                         <div className="flex items-center justify-center">
                           <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                           <span className="ml-3 text-muted-foreground">Loading...</span>
@@ -274,7 +273,7 @@ export default function DepartmentsAndGroups() {
                     </TableRow>
                   ) : filteredDepartments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-12 text-muted-foreground">
+                      <TableCell colSpan={2} className="text-center py-12 text-muted-foreground">
                         {departmentSearchQuery
                           ? 'No departments found.'
                           : 'No departments. Click "Add Department" to create one.'}
@@ -288,7 +287,6 @@ export default function DepartmentsAndGroups() {
                         onClick={() => setSelectedDepartmentId(dept.department_id)}
                       >
                         <TableCell className="font-medium">{dept.department_name}</TableCell>
-                        <TableCell>{dept.department_location || 'N/A'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
