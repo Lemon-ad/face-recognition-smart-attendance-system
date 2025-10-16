@@ -292,7 +292,10 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/admin/attendance-management')}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Present Today
@@ -310,7 +313,10 @@ export default function AdminDashboard() {
 
         {/* Department and Group Attendance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/admin/attendance-management')}
+          >
             <CardHeader>
               <CardTitle>Department Attendance</CardTitle>
             </CardHeader>
@@ -341,7 +347,10 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate('/admin/attendance-management')}
+          >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Group Attendance</span>
@@ -389,7 +398,10 @@ export default function AdminDashboard() {
         </div>
 
         {/* Attendance Trend */}
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/admin/attendance-management')}
+        >
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-4 justify-between">
               <span>Attendance Trend</span>
@@ -464,7 +476,10 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Recent Attendance Issues */}
-        <Card>
+        <Card 
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/admin/attendance-management')}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
