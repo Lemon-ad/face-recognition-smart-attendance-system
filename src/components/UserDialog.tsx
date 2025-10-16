@@ -22,9 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Upload } from 'lucide-react';
+import { Camera, Upload, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -38,6 +46,7 @@ const userSchema = z.object({
   position_name: z.string().optional(),
   department_id: z.string().optional(),
   group_id: z.string().optional(),
+  date_of_joining: z.date().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -80,6 +89,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
       setValue('position_name', user.position_name || '');
       setValue('department_id', user.department_id || '');
       setValue('group_id', user.group_id || '');
+      setValue('date_of_joining', user.date_of_joining ? new Date(user.date_of_joining) : new Date());
       setPhotoUrl(user.photo_url || null);
     } else {
       reset({
@@ -93,6 +103,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         position_name: '',
         department_id: '',
         group_id: '',
+        date_of_joining: new Date(),
       });
       setPhotoUrl(null);
     }
@@ -173,6 +184,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             position_name: data.position_name || null,
             department_id: data.department_id || null,
             group_id: data.group_id || null,
+            date_of_joining: data.date_of_joining ? format(data.date_of_joining, 'yyyy-MM-dd') : null,
             photo_url: photoUrl,
           })
           .eq('user_id', user!.user_id);
@@ -218,6 +230,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           position_name: data.position_name || null,
           department_id: data.department_id || null,
           group_id: data.group_id || null,
+          date_of_joining: data.date_of_joining ? format(data.date_of_joining, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
           photo_url: photoUrl,
         });
 
@@ -396,13 +409,42 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="position_name">Position</Label>
-            <Input
-              id="position_name"
-              {...register('position_name')}
-              placeholder="Job position"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="position_name">Position</Label>
+              <Input
+                id="position_name"
+                {...register('position_name')}
+                placeholder="Job position"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="date_of_joining">Date of Joining</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !watch('date_of_joining') && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {watch('date_of_joining') ? format(watch('date_of_joining'), "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={watch('date_of_joining')}
+                    onSelect={(date) => setValue('date_of_joining', date)}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <SheetFooter>
