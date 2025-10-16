@@ -10,6 +10,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentsAndGroups from "./pages/admin/DepartmentsAndGroups";
 import MemberDashboard from "./pages/member/MemberDashboard";
+import MemberProfile from "./pages/member/MemberProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireRole="member">
                   <MemberDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/member/profile"
+              element={
+                <ProtectedRoute requireRole="member">
+                  <MemberProfile />
                 </ProtectedRoute>
               }
             />
