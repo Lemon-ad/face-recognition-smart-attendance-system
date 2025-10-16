@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Camera, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FaceScanDialogProps {
   open: boolean;
@@ -11,14 +12,17 @@ interface FaceScanDialogProps {
 }
 
 export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
+  const { user } = useAuth();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ user_id: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (open) {
       startCamera();
+      fetchUserProfile();
     } else {
       stopCamera();
     }
@@ -26,7 +30,25 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
     return () => {
       stopCamera();
     };
-  }, [open]);
+  }, [open, user]);
+
+  const fetchUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('auth_uuid', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      toast.error('Failed to load user profile');
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -55,7 +77,10 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
   };
 
   const captureAndCompare = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !userProfile) {
+      toast.error('User profile not loaded');
+      return;
+    }
 
     setIsProcessing(true);
 
@@ -69,6 +94,7 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
       
       if (!ctx) {
         toast.error('Failed to capture image');
+        setIsProcessing(false);
         return;
       }
 
@@ -93,6 +119,7 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
       if (uploadError || !uploadData?.url) {
         toast.error('Failed to upload image');
         console.error('Upload error:', uploadError);
+        setIsProcessing(false);
         return;
       }
 
@@ -100,23 +127,27 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
       const { data: compareData, error: compareError } = await supabase.functions.invoke(
         'compare-faces',
         {
-          body: { capturedImageUrl: uploadData.url },
+          body: { 
+            capturedImageUrl: uploadData.url,
+            userId: userProfile.user_id
+          },
         }
       );
 
       if (compareError) {
         toast.error('Failed to compare faces');
         console.error('Compare error:', compareError);
+        setIsProcessing(false);
         return;
       }
 
       if (compareData.matched) {
-        toast.success(`Attendance marked, name: ${compareData.user.name}`, {
+        toast.success('Attendance marked successfully!', {
           duration: 5000,
         });
         handleClose();
       } else {
-        toast.error('User does not exist, please check with admin.', {
+        toast.error(compareData.message || 'Unsuccessful, please check with admin.', {
           duration: 5000,
         });
       }

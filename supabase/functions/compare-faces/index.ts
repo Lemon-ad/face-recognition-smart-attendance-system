@@ -12,11 +12,18 @@ serve(async (req) => {
   }
 
   try {
-    const { capturedImageUrl } = await req.json();
+    const { capturedImageUrl, userId } = await req.json();
 
     if (!capturedImageUrl) {
       return new Response(
         JSON.stringify({ error: 'No image URL provided' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'No user ID provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -36,83 +43,100 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Fetch all users with photo_url
-    const { data: users, error: usersError } = await supabase
+    // Fetch the specific user's photo
+    const { data: user, error: userError } = await supabase
       .from('users')
       .select('user_id, first_name, middle_name, last_name, photo_url')
-      .not('photo_url', 'is', null);
+      .eq('user_id', userId)
+      .single();
 
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
+    if (userError) {
+      console.error('Error fetching user:', userError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch users from database' }),
+        JSON.stringify({ error: 'Failed to fetch user from database' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!users || users.length === 0) {
+    if (!user || !user.photo_url) {
       return new Response(
         JSON.stringify({ 
           matched: false, 
-          message: 'No users with photos found in database' 
+          message: 'User does not have a registered photo. Please check with admin.' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Compare captured face with each user's photo
-    for (const user of users) {
-      try {
-        const formData = new FormData();
-        formData.append('api_key', FACEPP_API_KEY);
-        formData.append('api_secret', FACEPP_API_SECRET);
-        formData.append('image_url1', capturedImageUrl);
-        formData.append('image_url2', user.photo_url);
+    // Compare captured face with user's registered photo
+    try {
+      const formData = new FormData();
+      formData.append('api_key', FACEPP_API_KEY);
+      formData.append('api_secret', FACEPP_API_SECRET);
+      formData.append('image_url1', capturedImageUrl);
+      formData.append('image_url2', user.photo_url);
 
-        const compareResponse = await fetch(
-          'https://api-us.faceplusplus.com/facepp/v3/compare',
-          {
-            method: 'POST',
-            body: formData,
-          }
-        );
-
-        const compareResult = await compareResponse.json();
-
-        console.log(`Comparing with user ${user.first_name} ${user.last_name}:`, compareResult);
-
-        // Check if faces match (confidence > 70)
-        if (compareResult.confidence && compareResult.confidence > 70) {
-          const fullName = [user.first_name, user.middle_name, user.last_name]
-            .filter(Boolean)
-            .join(' ');
-
-          return new Response(
-            JSON.stringify({
-              matched: true,
-              user: {
-                user_id: user.user_id,
-                name: fullName,
-              },
-              confidence: compareResult.confidence,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+      const compareResponse = await fetch(
+        'https://api-us.faceplusplus.com/facepp/v3/compare',
+        {
+          method: 'POST',
+          body: formData,
         }
-      } catch (error) {
-        console.error(`Error comparing with user ${user.user_id}:`, error);
-        // Continue to next user
-      }
-    }
+      );
 
-    // No match found
-    return new Response(
-      JSON.stringify({
-        matched: false,
-        message: 'No matching face found',
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      const compareResult = await compareResponse.json();
+
+      console.log(`Comparing with user ${user.first_name} ${user.last_name}:`, compareResult);
+
+      // Check for Face++ API errors
+      if (compareResult.error_message) {
+        console.error('Face++ API error:', compareResult.error_message);
+        return new Response(
+          JSON.stringify({ 
+            matched: false, 
+            message: 'Face recognition service error. Please try again.' 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if faces match (confidence > 70)
+      if (compareResult.confidence && compareResult.confidence > 70) {
+        const fullName = [user.first_name, user.middle_name, user.last_name]
+          .filter(Boolean)
+          .join(' ');
+
+        return new Response(
+          JSON.stringify({
+            matched: true,
+            user: {
+              user_id: user.user_id,
+              name: fullName,
+            },
+            confidence: compareResult.confidence,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // No match found
+      return new Response(
+        JSON.stringify({
+          matched: false,
+          message: 'Face does not match. Please check with admin.',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Error comparing faces:', error);
+      return new Response(
+        JSON.stringify({ 
+          matched: false, 
+          message: 'Failed to compare faces. Please try again.' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
   } catch (error) {
     console.error('Error in compare-faces function:', error);
