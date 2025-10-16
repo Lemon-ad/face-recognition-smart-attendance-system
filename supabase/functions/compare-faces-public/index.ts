@@ -206,7 +206,7 @@ serve(async (req) => {
             .gte('created_at', today.toISOString())
             .single();
 
-          if (existingAttendance) {
+          if (existingAttendance && existingAttendance.check_in_time) {
             // User already checked in today - update check_out_time and determine status
             // Keep the original check-in status (present/late) unless checking out early
             let checkOutStatus = existingAttendance.status;
@@ -245,9 +245,17 @@ serve(async (req) => {
               { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           } else {
-            // First scan of the day
+            // First scan of the day OR check_in_time is missing
             // Only record check-in if location matches
             if (!locationMatches) {
+              // If attendance record exists but no check_in, delete it first
+              if (existingAttendance) {
+                await supabase
+                  .from('attendance')
+                  .delete()
+                  .eq('attendance_id', existingAttendance.attendance_id);
+              }
+              
               return new Response(
                 JSON.stringify({
                   matched: true,
@@ -265,15 +273,28 @@ serve(async (req) => {
               );
             }
 
-            // Location matches - create new attendance record with check_in_time
-            await supabase
-              .from('attendance')
-              .insert({
-                user_id: user.user_id,
-                check_in_time: klTime.toISOString(),
-                status: status,
-                location: `${userLocation.longitude},${userLocation.latitude}`
-              });
+            // Location matches - create or update attendance record with check_in_time
+            if (existingAttendance) {
+              // Update existing record with check_in_time
+              await supabase
+                .from('attendance')
+                .update({
+                  check_in_time: klTime.toISOString(),
+                  status: status,
+                  location: `${userLocation.longitude},${userLocation.latitude}`
+                })
+                .eq('attendance_id', existingAttendance.attendance_id);
+            } else {
+              // Create new attendance record
+              await supabase
+                .from('attendance')
+                .insert({
+                  user_id: user.user_id,
+                  check_in_time: klTime.toISOString(),
+                  status: status,
+                  location: `${userLocation.longitude},${userLocation.latitude}`
+                });
+            }
 
             return new Response(
               JSON.stringify({
