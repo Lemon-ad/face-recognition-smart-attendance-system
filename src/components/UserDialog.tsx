@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,6 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Camera, Upload } from 'lucide-react';
 
 const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -50,6 +52,9 @@ interface UserDialogProps {
 
 export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const isEdit = !!user;
 
@@ -82,6 +87,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
       setValue('position_name', user.position_name || '');
       setValue('department_id', user.department_id || '');
       setValue('group_id', user.group_id || '');
+      setPhotoUrl(user.photo_url || null);
     } else {
       reset({
         role: 'member',
@@ -96,8 +102,64 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         department_id: '',
         group_id: '',
       });
+      setPhotoUrl(null);
     }
   }, [user, setValue, reset]);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file type',
+        description: 'Please select an image file',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: 'Please select an image smaller than 5MB',
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const { data, error } = await supabase.functions.invoke('upload-image', {
+        body: formData,
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        setPhotoUrl(data.url);
+        toast({
+          title: 'Success',
+          description: 'Photo uploaded successfully',
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Failed to upload photo',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const onSubmit = async (data: UserFormData) => {
     setLoading(true);
@@ -119,6 +181,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             position_name: data.position_name || null,
             department_id: data.department_id || null,
             group_id: data.group_id || null,
+            photo_url: photoUrl,
           })
           .eq('user_id', user!.user_id);
 
@@ -163,6 +226,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           position_name: data.position_name || null,
           department_id: data.department_id || null,
           group_id: data.group_id || null,
+          photo_url: photoUrl,
         });
 
         if (insertError) throw insertError;
@@ -201,6 +265,46 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Profile Photo Upload */}
+          <div className="flex flex-col items-center space-y-4 pb-4 border-b">
+            <Avatar className="h-24 w-24">
+              <AvatarImage src={photoUrl || undefined} alt="Profile photo" />
+              <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                {watch('first_name')?.[0] || <Camera className="h-10 w-10" />}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? 'Uploading...' : 'Upload Photo'}
+              </Button>
+              {photoUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPhotoUrl(null)}
+                  disabled={uploading}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="username">Username *</Label>
