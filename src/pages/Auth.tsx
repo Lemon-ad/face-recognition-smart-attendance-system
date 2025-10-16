@@ -4,16 +4,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, Camera, Scan } from 'lucide-react';
+import { Eye, EyeOff, Scan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { FaceScanDialog } from '@/components/FaceScanDialog';
 
 export default function Auth() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showFaceScan, setShowFaceScan] = useState(false);
   const { signIn, user, userRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -130,30 +128,8 @@ export default function Auth() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-
-          {/* Face Scan Button */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11 text-base font-medium"
-            onClick={() => setShowFaceScan(true)}
-          >
-            <Camera className="h-5 w-5 mr-2" />
-            Scan Face
-          </Button>
         </div>
       </div>
-
-      <FaceScanDialog open={showFaceScan} onOpenChange={setShowFaceScan} />
     </div>
   );
 }
