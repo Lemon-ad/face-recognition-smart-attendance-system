@@ -14,9 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { History, FileDown } from 'lucide-react';
+import { History, FileDown, CalendarIcon, X } from 'lucide-react';
 import { AttendanceHistoryDialog } from '@/components/AttendanceHistoryDialog';
 import {
   DropdownMenu,
@@ -24,6 +25,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -67,8 +75,17 @@ export default function AttendanceManagement() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
+  const [filteredData, setFilteredData] = useState<AttendanceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  
+  // Filter states
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [checkInStartDate, setCheckInStartDate] = useState<Date | undefined>();
+  const [checkInEndDate, setCheckInEndDate] = useState<Date | undefined>();
+  const [checkOutStartDate, setCheckOutStartDate] = useState<Date | undefined>();
+  const [checkOutEndDate, setCheckOutEndDate] = useState<Date | undefined>();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchDepartments();
@@ -203,6 +220,7 @@ export default function AttendanceManagement() {
       });
 
       setAttendanceData(mappedData);
+      setFilteredData(mappedData);
     } catch (error) {
       console.error('Error fetching attendance data:', error);
       toast.error('Failed to load attendance data');
@@ -210,6 +228,55 @@ export default function AttendanceManagement() {
       setLoading(false);
     }
   };
+
+  // Apply filters whenever filter values or attendance data change
+  useEffect(() => {
+    let filtered = [...attendanceData];
+
+    // Filter by user search
+    if (userSearchQuery) {
+      filtered = filtered.filter(data => 
+        getUserName(data.user).toLowerCase().includes(userSearchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by check-in date range
+    if (checkInStartDate && checkInEndDate) {
+      filtered = filtered.filter(data => {
+        if (!data.attendance?.check_in_time) return false;
+        const checkInDate = new Date(data.attendance.check_in_time);
+        checkInDate.setHours(0, 0, 0, 0);
+        const start = new Date(checkInStartDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(checkInEndDate);
+        end.setHours(23, 59, 59, 999);
+        return checkInDate >= start && checkInDate <= end;
+      });
+    }
+
+    // Filter by check-out date range
+    if (checkOutStartDate && checkOutEndDate) {
+      filtered = filtered.filter(data => {
+        if (!data.attendance?.check_out_time) return false;
+        const checkOutDate = new Date(data.attendance.check_out_time);
+        checkOutDate.setHours(0, 0, 0, 0);
+        const start = new Date(checkOutStartDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(checkOutEndDate);
+        end.setHours(23, 59, 59, 999);
+        return checkOutDate >= start && checkOutDate <= end;
+      });
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(data => 
+        data.attendance?.status === statusFilter || (!data.attendance && statusFilter === 'absent')
+      );
+    }
+
+    setFilteredData(filtered);
+  }, [attendanceData, userSearchQuery, checkInStartDate, checkInEndDate, checkOutStartDate, checkOutEndDate, statusFilter]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -251,6 +318,15 @@ export default function AttendanceManagement() {
     }
   };
 
+  const clearFilters = () => {
+    setUserSearchQuery('');
+    setCheckInStartDate(undefined);
+    setCheckInEndDate(undefined);
+    setCheckOutStartDate(undefined);
+    setCheckOutEndDate(undefined);
+    setStatusFilter('all');
+  };
+
   const generatePDF = () => {
     const doc = new jsPDF();
     
@@ -267,8 +343,8 @@ export default function AttendanceManagement() {
     const groupName = selectedGroup === 'all' ? 'All Groups' : groups.find(g => g.group_id === selectedGroup)?.group_name || 'All';
     doc.text(`Department: ${deptName} | Group: ${groupName}`, 14, 35);
     
-    // Prepare table data
-    const tableData = attendanceData.map(data => [
+    // Prepare table data using filtered data
+    const tableData = filteredData.map(data => [
       getUserName(data.user),
       data.attendance?.check_in_time ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm') : '-',
       data.attendance?.check_out_time ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm') : '-',
@@ -294,7 +370,7 @@ export default function AttendanceManagement() {
     const deptName = departments.find(d => d.department_id === selectedDepartment)?.department_name || 'All';
     const groupName = selectedGroup === 'all' ? 'All Groups' : groups.find(g => g.group_id === selectedGroup)?.group_name || 'All';
     
-    const excelData = attendanceData.map(data => ({
+    const excelData = filteredData.map(data => ({
       'User': getUserName(data.user),
       'Check In': data.attendance?.check_in_time ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm') : '-',
       'Check Out': data.attendance?.check_out_time ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm') : '-',
@@ -360,37 +436,183 @@ export default function AttendanceManagement() {
                 </Button>
               </div>
             </div>
-            <div className="flex gap-4 mt-4">
-              <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Department</label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.department_id} value={dept.department_id}>
-                        {dept.department_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-4 mt-4">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Department</label>
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.department_id} value={dept.department_id}>
+                          {dept.department_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Group</label>
+                  <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Groups</SelectItem>
+                      {groups.map((group) => (
+                        <SelectItem key={group.group_id} value={group.group_id}>
+                          {group.group_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex-1">
-                <label className="text-sm font-medium mb-2 block">Group</label>
-                <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {groups.map((group) => (
-                      <SelectItem key={group.group_id} value={group.group_id}>
-                        {group.group_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Filters Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium">Filters</h3>
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Clear Filters
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Search User</label>
+                    <Input
+                      placeholder="Search by name..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Status</label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="present">Present</SelectItem>
+                        <SelectItem value="late">Late</SelectItem>
+                        <SelectItem value="early_out">Early Out</SelectItem>
+                        <SelectItem value="no_checkout">No Checkout</SelectItem>
+                        <SelectItem value="absent">Absent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Check-In Date Range</label>
+                    <div className="flex gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !checkInStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {checkInStartDate ? format(checkInStartDate, "PPP") : "Start date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkInStartDate}
+                            onSelect={setCheckInStartDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !checkInEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {checkInEndDate ? format(checkInEndDate, "PPP") : "End date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkInEndDate}
+                            onSelect={setCheckInEndDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Check-Out Date Range</label>
+                    <div className="flex gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !checkOutStartDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {checkOutStartDate ? format(checkOutStartDate, "PPP") : "Start date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkOutStartDate}
+                            onSelect={setCheckOutStartDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !checkOutEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {checkOutEndDate ? format(checkOutEndDate, "PPP") : "End date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkOutEndDate}
+                            onSelect={setCheckOutEndDate}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -412,14 +634,14 @@ export default function AttendanceManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attendanceData.length === 0 ? (
+                  {filteredData.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        No users found in selected department/group
+                        {attendanceData.length === 0 ? 'No users found in selected department/group' : 'No results match the current filters'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    attendanceData.map((data) => (
+                    filteredData.map((data) => (
                       <TableRow key={data.user.user_id}>
                         <TableCell className="font-medium">
                           {getUserName(data.user)}
