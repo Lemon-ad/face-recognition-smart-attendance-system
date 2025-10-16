@@ -69,8 +69,11 @@ export default function UserManagement() {
   }, []);
 
   useEffect(() => {
-    // Filter users based on search query
+    // Filter users based on search query and exclude admin users
     const filtered = users.filter((user) => {
+      // Exclude admin users
+      if (user.role === 'admin') return false;
+      
       const searchLower = searchQuery.toLowerCase();
       return (
         user.username?.toLowerCase().includes(searchLower) ||
