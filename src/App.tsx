@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import DepartmentsAndGroups from "./pages/admin/DepartmentsAndGroups";
+import AttendanceManagement from "./pages/admin/AttendanceManagement";
 import MemberDashboard from "./pages/member/MemberDashboard";
 import MemberProfile from "./pages/member/MemberProfile";
 import NotFound from "./pages/NotFound";
@@ -48,6 +49,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireRole="admin">
                   <DepartmentsAndGroups />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/attendance"
+              element={
+                <ProtectedRoute requireRole="admin">
+                  <AttendanceManagement />
                 </ProtectedRoute>
               }
             />
