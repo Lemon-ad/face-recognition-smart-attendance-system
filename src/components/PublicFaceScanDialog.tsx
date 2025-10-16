@@ -51,19 +51,28 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
   };
 
   const handleClose = () => {
+    // Stop camera
     stopCamera();
     
-    // Clear canvas
+    // Clear canvas and reset dimensions
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
+      canvasRef.current.width = 0;
+      canvasRef.current.height = 0;
+    }
+    
+    // Clear video source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     
     // Reset processing state
     setIsProcessing(false);
     
+    // Close dialog
     onOpenChange(false);
   };
 
