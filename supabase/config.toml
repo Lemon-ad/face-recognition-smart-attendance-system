@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.compare-faces]
 verify_jwt = false
+
+[functions.compare-faces-public]
+verify_jwt = false
