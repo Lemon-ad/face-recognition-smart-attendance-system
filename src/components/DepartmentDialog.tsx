@@ -29,6 +29,7 @@ type Department = Tables<'department'>;
 const formSchema = z.object({
   department_name: z.string().min(1, 'Department name is required'),
   department_location: z.string().optional(),
+  geofence_radius: z.number().min(1, 'Radius must be at least 1 meter').optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   department_description: z.string().optional(),
@@ -53,6 +54,7 @@ export function DepartmentDialog({
     defaultValues: {
       department_name: '',
       department_location: '',
+      geofence_radius: 500,
       start_time: '',
       end_time: '',
       department_description: '',
@@ -64,6 +66,7 @@ export function DepartmentDialog({
       form.reset({
         department_name: department.department_name || '',
         department_location: department.department_location || '',
+        geofence_radius: department.geofence_radius || 500,
         start_time: department.start_time || '',
         end_time: department.end_time || '',
         department_description: department.department_description || '',
@@ -72,6 +75,7 @@ export function DepartmentDialog({
       form.reset({
         department_name: '',
         department_location: '',
+        geofence_radius: 500,
         start_time: '',
         end_time: '',
         department_description: '',
@@ -87,6 +91,7 @@ export function DepartmentDialog({
           .update({
             department_name: data.department_name,
             department_location: data.department_location || null,
+            geofence_radius: data.geofence_radius || 500,
             start_time: data.start_time || null,
             end_time: data.end_time || null,
             department_description: data.department_description || null,
@@ -103,6 +108,7 @@ export function DepartmentDialog({
         const { error } = await supabase.from('department').insert({
           department_name: data.department_name,
           department_location: data.department_location || null,
+          geofence_radius: data.geofence_radius || 500,
           start_time: data.start_time || null,
           end_time: data.end_time || null,
           department_description: data.department_description || null,
@@ -164,6 +170,25 @@ export function DepartmentDialog({
                     <LocationMapPicker
                       value={field.value}
                       onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="geofence_radius"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Geofence Radius (meters)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="500" 
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 500)}
                     />
                   </FormControl>
                   <FormMessage />

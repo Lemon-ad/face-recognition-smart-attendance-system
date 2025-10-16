@@ -36,6 +36,7 @@ type Department = Tables<'department'>;
 const formSchema = z.object({
   group_name: z.string().min(1, 'Group name is required'),
   group_location: z.string().optional(),
+  geofence_radius: z.number().min(1, 'Radius must be at least 1 meter').optional(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   group_description: z.string().optional(),
@@ -63,6 +64,7 @@ export function GroupDialog({
     defaultValues: {
       group_name: '',
       group_location: '',
+      geofence_radius: 500,
       start_time: '',
       end_time: '',
       group_description: '',
@@ -74,6 +76,7 @@ export function GroupDialog({
       form.reset({
         group_name: group.group_name || '',
         group_location: group.group_location || '',
+        geofence_radius: group.geofence_radius || 500,
         start_time: group.start_time || '',
         end_time: group.end_time || '',
         group_description: group.group_description || '',
@@ -82,6 +85,7 @@ export function GroupDialog({
       form.reset({
         group_name: '',
         group_location: '',
+        geofence_radius: 500,
         start_time: '',
         end_time: '',
         group_description: '',
@@ -106,6 +110,7 @@ export function GroupDialog({
           .update({
             group_name: data.group_name,
             group_location: data.group_location || null,
+            geofence_radius: data.geofence_radius || 500,
             start_time: data.start_time || null,
             end_time: data.end_time || null,
             group_description: data.group_description || null,
@@ -123,6 +128,7 @@ export function GroupDialog({
           group_name: data.group_name,
           department_id: departmentId,
           group_location: data.group_location || null,
+          geofence_radius: data.geofence_radius || 500,
           start_time: data.start_time || null,
           end_time: data.end_time || null,
           group_description: data.group_description || null,
@@ -182,6 +188,25 @@ export function GroupDialog({
                   <FormLabel>Location</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter location" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="geofence_radius"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Geofence Radius (meters)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      placeholder="500" 
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 500)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

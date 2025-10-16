@@ -105,11 +105,13 @@ serve(async (req) => {
           let endTime = null;
           let departmentLocation = null;
           
-          // Get department location and times
+          // Get department location, times, and geofence radius
+          let geofenceRadius = 500; // Default 500 meters
+          
           if (user.department_id) {
             const { data: deptData } = await supabase
               .from('department')
-              .select('start_time, end_time, department_location')
+              .select('start_time, end_time, department_location, geofence_radius')
               .eq('department_id', user.department_id)
               .single();
             
@@ -117,20 +119,26 @@ serve(async (req) => {
               departmentLocation = deptData.department_location;
               startTime = deptData.start_time;
               endTime = deptData.end_time;
+              geofenceRadius = deptData.geofence_radius || 500;
             }
           }
           
-          // Override with group times if user has a group
+          // Override with group times and geofence if user has a group
           if (user.group_id) {
             const { data: groupData } = await supabase
               .from('group')
-              .select('start_time, end_time')
+              .select('start_time, end_time, geofence_radius')
               .eq('group_id', user.group_id)
               .single();
             
             if (groupData?.start_time) {
               startTime = groupData.start_time;
               endTime = groupData.end_time;
+            }
+            
+            // Override geofence radius if group has one
+            if (groupData?.geofence_radius) {
+              geofenceRadius = groupData.geofence_radius;
             }
           }
 
@@ -151,13 +159,14 @@ serve(async (req) => {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
             
-            // Allow 5km (5000 meters) tolerance
-            locationMatches = distance <= 5000;
+            // Check if within geofence radius
+            locationMatches = distance <= geofenceRadius;
             
             console.log('Location validation:', {
               userLocation,
               departmentLocation: { lng: deptLng, lat: deptLat },
               distance: `${distance.toFixed(2)}m`,
+              geofenceRadius: `${geofenceRadius}m`,
               matches: locationMatches
             });
           }

@@ -63,6 +63,7 @@ export type Database = {
           department_location: string | null
           department_name: string
           end_time: string | null
+          geofence_radius: number | null
           start_time: string | null
           updated_at: string | null
         }
@@ -73,6 +74,7 @@ export type Database = {
           department_location?: string | null
           department_name: string
           end_time?: string | null
+          geofence_radius?: number | null
           start_time?: string | null
           updated_at?: string | null
         }
@@ -83,6 +85,7 @@ export type Database = {
           department_location?: string | null
           department_name?: string
           end_time?: string | null
+          geofence_radius?: number | null
           start_time?: string | null
           updated_at?: string | null
         }
@@ -93,6 +96,7 @@ export type Database = {
           created_at: string | null
           department_id: string | null
           end_time: string | null
+          geofence_radius: number | null
           group_description: string | null
           group_id: string
           group_location: string | null
@@ -104,6 +108,7 @@ export type Database = {
           created_at?: string | null
           department_id?: string | null
           end_time?: string | null
+          geofence_radius?: number | null
           group_description?: string | null
           group_id?: string
           group_location?: string | null
@@ -115,6 +120,7 @@ export type Database = {
           created_at?: string | null
           department_id?: string | null
           end_time?: string | null
+          geofence_radius?: number | null
           group_description?: string | null
           group_id?: string
           group_location?: string | null
