@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -7,9 +7,12 @@ import {
   Building2, 
   ClipboardList,
   LogOut,
-  User
+  User,
+  Menu,
+  X
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -17,6 +20,8 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { signOut, userRole } = useAuth();
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const adminNavItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -34,14 +39,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-border flex flex-col h-screen">
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-border">
-          <h1 className="text-xl font-bold text-primary">
+      {/* Mobile Menu Toggle */}
+      {isMobile && (
+        <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-border flex items-center px-4 z-40">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
+          <h1 className="ml-4 text-lg font-bold text-primary">
             Smart Attendance
           </h1>
         </div>
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300' : 'w-64'}
+        ${isMobile && !mobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}
+        bg-white border-r border-border flex flex-col h-screen
+      `}>
+        {/* Logo */}
+        {!isMobile && (
+          <div className="h-16 flex items-center justify-center border-b border-border">
+            <h1 className="text-xl font-bold text-primary">
+              Smart Attendance
+            </h1>
+          </div>
+        )}
+        {isMobile && <div className="h-16" />}
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
@@ -50,6 +78,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               key={item.to}
               to={item.to}
               end
+              onClick={() => isMobile && setMobileMenuOpen(false)}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
@@ -77,8 +106,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       </aside>
 
+      {/* Overlay for mobile */}
+      {isMobile && mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto ${isMobile ? 'pt-16' : ''}`}>
         {children}
       </main>
     </div>
