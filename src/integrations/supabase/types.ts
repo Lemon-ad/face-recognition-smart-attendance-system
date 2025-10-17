@@ -22,7 +22,6 @@ export type Database = {
           created_at: string | null
           location: string | null
           status: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -32,7 +31,6 @@ export type Database = {
           created_at?: string | null
           location?: string | null
           status: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -42,7 +40,6 @@ export type Database = {
           created_at?: string | null
           location?: string | null
           status?: Database["public"]["Enums"]["attendance_status_enum"]
-          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -54,6 +51,48 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      attendance_history: {
+        Row: {
+          archived_at: string | null
+          attendance_date: string
+          attendance_id: string
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string | null
+          history_id: string
+          location: string | null
+          status: Database["public"]["Enums"]["attendance_status_enum"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          attendance_date: string
+          attendance_id: string
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          history_id?: string
+          location?: string | null
+          status: Database["public"]["Enums"]["attendance_status_enum"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          attendance_date?: string
+          attendance_id?: string
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          history_id?: string
+          location?: string | null
+          status?: Database["public"]["Enums"]["attendance_status_enum"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       department: {
         Row: {
@@ -218,7 +257,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      daily_attendance_reset: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      mark_daily_absent: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       attendance_status_enum:
