@@ -505,7 +505,7 @@ export default function AttendanceManagement() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Created At Date Range</label>
                     <div className="flex gap-2">
@@ -575,7 +575,9 @@ export default function AttendanceManagement() {
                       />
                     </div>
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Check-Out Time Range</label>
                     <div className="flex gap-2">
