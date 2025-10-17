@@ -377,10 +377,20 @@ export default function AttendanceManagement() {
     }
 
     try {
-      // Create a timestamp from the time input
+      // Create a timestamp in UTC+8 (Malaysia time)
       const now = new Date();
+      const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
       const [hours, minutes] = checkInTime.split(':');
-      const checkInTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+      
+      // Set the time on today's date in UTC+8
+      const checkInTimestamp = new Date(Date.UTC(
+        malaysiaTime.getUTCFullYear(),
+        malaysiaTime.getUTCMonth(),
+        malaysiaTime.getUTCDate(),
+        parseInt(hours),
+        parseInt(minutes),
+        0
+      ));
 
       const { error } = await supabase
         .from('attendance')
@@ -410,10 +420,20 @@ export default function AttendanceManagement() {
     }
 
     try {
-      // Create a timestamp from the time input
+      // Create a timestamp in UTC+8 (Malaysia time)
       const now = new Date();
+      const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
       const [hours, minutes] = lateCheckInTime.split(':');
-      const checkInTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+      
+      // Set the time on today's date in UTC+8
+      const checkInTimestamp = new Date(Date.UTC(
+        malaysiaTime.getUTCFullYear(),
+        malaysiaTime.getUTCMonth(),
+        malaysiaTime.getUTCDate(),
+        parseInt(hours),
+        parseInt(minutes),
+        0
+      ));
 
       const { error } = await supabase
         .from('attendance')
@@ -443,10 +463,20 @@ export default function AttendanceManagement() {
     }
 
     try {
-      // Create a timestamp from the time input
+      // Create a timestamp in UTC+8 (Malaysia time)
       const now = new Date();
+      const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
       const [hours, minutes] = earlyOutTime.split(':');
-      const checkOutTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+      
+      // Set the time on today's date in UTC+8
+      const checkOutTimestamp = new Date(Date.UTC(
+        malaysiaTime.getUTCFullYear(),
+        malaysiaTime.getUTCMonth(),
+        malaysiaTime.getUTCDate(),
+        parseInt(hours),
+        parseInt(minutes),
+        0
+      ));
 
       const { error } = await supabase
         .from('attendance')
