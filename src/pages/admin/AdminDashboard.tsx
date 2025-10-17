@@ -96,11 +96,14 @@ export default function AdminDashboard() {
 
   // Get today's date by comparing created_at dates (which are already in UTC)
   const isSameDate = (createdAtStr: string) => {
-    const createdAt = new Date(createdAtStr);
-    // Get the date portion from created_at (YYYY-MM-DD)
-    const recordYear = createdAt.getUTCFullYear();
-    const recordMonth = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
-    const recordDay = String(createdAt.getUTCDate()).padStart(2, '0');
+    const createdAtUTC = new Date(createdAtStr);
+    // Convert created_at to Malaysia time by adding 8 hours
+    const createdAtMalaysia = new Date(createdAtUTC.getTime() + 8 * 60 * 60 * 1000);
+    
+    // Get the date portion from created_at in Malaysia time (YYYY-MM-DD)
+    const recordYear = createdAtMalaysia.getUTCFullYear();
+    const recordMonth = String(createdAtMalaysia.getUTCMonth() + 1).padStart(2, '0');
+    const recordDay = String(createdAtMalaysia.getUTCDate()).padStart(2, '0');
     const recordDate = `${recordYear}-${recordMonth}-${recordDay}`;
     
     // Get today's date by adding 8 hours to system time
