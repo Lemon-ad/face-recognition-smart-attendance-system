@@ -111,6 +111,8 @@ export default function AdminDashboard() {
     const todayDay = String(malaysiaTime.getUTCDate()).padStart(2, '0');
     const todayDate = `${todayYear}-${todayMonth}-${todayDay}`;
     
+    console.log(`isSameDate: recordDate=${recordDate}, todayDate=${todayDate}, match=${recordDate === todayDate}`);
+    
     return recordDate === todayDate;
   };
 
@@ -127,13 +129,23 @@ export default function AdminDashboard() {
       .from('attendance')
       .select('*');
     
+    console.log('All attendance records:', allAttendance);
+    
     // Filter by today's date
-    const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
+    const todayAttendance = allAttendance?.filter(record => {
+      const isToday = isSameDate(record.created_at);
+      console.log(`Record ${record.attendance_id}: created_at=${record.created_at}, isToday=${isToday}, check_in_time=${record.check_in_time}`);
+      return isToday;
+    }) || [];
+    
+    console.log('Today attendance:', todayAttendance);
     
     // Calculate attendance rate: attendance with check_in_time / total attendance created today
     const withCheckIn = todayAttendance.filter(record => record.check_in_time !== null).length;
     const totalToday = todayAttendance.length;
     const percentage = totalToday > 0 ? (withCheckIn / totalToday) * 100 : 0;
+    
+    console.log(`Present today: ${withCheckIn}/${totalToday} = ${percentage}%`);
     
     setPresentToday({ count: withCheckIn, percentage });
 
