@@ -80,10 +80,12 @@ export default function AttendanceManagement() {
   
   // Filter states
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [checkInStartDate, setCheckInStartDate] = useState<Date | undefined>();
-  const [checkInEndDate, setCheckInEndDate] = useState<Date | undefined>();
-  const [checkOutStartDate, setCheckOutStartDate] = useState<Date | undefined>();
-  const [checkOutEndDate, setCheckOutEndDate] = useState<Date | undefined>();
+  const [createdAtStartDate, setCreatedAtStartDate] = useState<Date | undefined>();
+  const [createdAtEndDate, setCreatedAtEndDate] = useState<Date | undefined>();
+  const [checkInStartTime, setCheckInStartTime] = useState('');
+  const [checkInEndTime, setCheckInEndTime] = useState('');
+  const [checkOutStartTime, setCheckOutStartTime] = useState('');
+  const [checkOutEndTime, setCheckOutEndTime] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -234,31 +236,37 @@ export default function AttendanceManagement() {
       );
     }
 
-    // Filter by check-in date range
-    if (checkInStartDate && checkInEndDate) {
+    // Filter by created_at date range
+    if (createdAtStartDate && createdAtEndDate) {
       filtered = filtered.filter(data => {
-        if (!data.attendance?.check_in_time) return false;
-        const checkInDate = new Date(data.attendance.check_in_time);
-        checkInDate.setHours(0, 0, 0, 0);
-        const start = new Date(checkInStartDate);
+        if (!data.attendance?.created_at) return false;
+        const createdDate = new Date(data.attendance.created_at);
+        createdDate.setHours(0, 0, 0, 0);
+        const start = new Date(createdAtStartDate);
         start.setHours(0, 0, 0, 0);
-        const end = new Date(checkInEndDate);
+        const end = new Date(createdAtEndDate);
         end.setHours(23, 59, 59, 999);
-        return checkInDate >= start && checkInDate <= end;
+        return createdDate >= start && createdDate <= end;
       });
     }
 
-    // Filter by check-out date range
-    if (checkOutStartDate && checkOutEndDate) {
+    // Filter by check-in time range
+    if (checkInStartTime && checkInEndTime) {
+      filtered = filtered.filter(data => {
+        if (!data.attendance?.check_in_time) return false;
+        const checkInDate = new Date(data.attendance.check_in_time);
+        const timeString = format(checkInDate, 'HH:mm');
+        return timeString >= checkInStartTime && timeString <= checkInEndTime;
+      });
+    }
+
+    // Filter by check-out time range
+    if (checkOutStartTime && checkOutEndTime) {
       filtered = filtered.filter(data => {
         if (!data.attendance?.check_out_time) return false;
         const checkOutDate = new Date(data.attendance.check_out_time);
-        checkOutDate.setHours(0, 0, 0, 0);
-        const start = new Date(checkOutStartDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(checkOutEndDate);
-        end.setHours(23, 59, 59, 999);
-        return checkOutDate >= start && checkOutDate <= end;
+        const timeString = format(checkOutDate, 'HH:mm');
+        return timeString >= checkOutStartTime && timeString <= checkOutEndTime;
       });
     }
 
@@ -270,7 +278,7 @@ export default function AttendanceManagement() {
     }
 
     setFilteredData(filtered);
-  }, [attendanceData, userSearchQuery, checkInStartDate, checkInEndDate, checkOutStartDate, checkOutEndDate, statusFilter]);
+  }, [attendanceData, userSearchQuery, createdAtStartDate, createdAtEndDate, checkInStartTime, checkInEndTime, checkOutStartTime, checkOutEndTime, statusFilter]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
@@ -314,10 +322,12 @@ export default function AttendanceManagement() {
 
   const clearFilters = () => {
     setUserSearchQuery('');
-    setCheckInStartDate(undefined);
-    setCheckInEndDate(undefined);
-    setCheckOutStartDate(undefined);
-    setCheckOutEndDate(undefined);
+    setCreatedAtStartDate(undefined);
+    setCreatedAtEndDate(undefined);
+    setCheckInStartTime('');
+    setCheckInEndTime('');
+    setCheckOutStartTime('');
+    setCheckOutEndTime('');
     setStatusFilter('all');
   };
 
@@ -495,9 +505,9 @@ export default function AttendanceManagement() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Check-In Date Range</label>
+                    <label className="text-sm font-medium mb-2 block">Created At Date Range</label>
                     <div className="flex gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -505,18 +515,18 @@ export default function AttendanceManagement() {
                             variant="outline"
                             className={cn(
                               "flex-1 justify-start text-left font-normal",
-                              !checkInStartDate && "text-muted-foreground"
+                              !createdAtStartDate && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkInStartDate ? format(checkInStartDate, "PPP") : "Start date"}
+                            {createdAtStartDate ? format(createdAtStartDate, "PPP") : "Start date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={checkInStartDate}
-                            onSelect={setCheckInStartDate}
+                            selected={createdAtStartDate}
+                            onSelect={setCreatedAtStartDate}
                             initialFocus
                             className={cn("p-3 pointer-events-auto")}
                           />
@@ -528,18 +538,18 @@ export default function AttendanceManagement() {
                             variant="outline"
                             className={cn(
                               "flex-1 justify-start text-left font-normal",
-                              !checkInEndDate && "text-muted-foreground"
+                              !createdAtEndDate && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkInEndDate ? format(checkInEndDate, "PPP") : "End date"}
+                            {createdAtEndDate ? format(createdAtEndDate, "PPP") : "End date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={checkInEndDate}
-                            onSelect={setCheckInEndDate}
+                            selected={createdAtEndDate}
+                            onSelect={setCreatedAtEndDate}
                             initialFocus
                             className={cn("p-3 pointer-events-auto")}
                           />
@@ -549,54 +559,38 @@ export default function AttendanceManagement() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Check-Out Date Range</label>
+                    <label className="text-sm font-medium mb-2 block">Check-In Time Range</label>
                     <div className="flex gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "flex-1 justify-start text-left font-normal",
-                              !checkOutStartDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkOutStartDate ? format(checkOutStartDate, "PPP") : "Start date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={checkOutStartDate}
-                            onSelect={setCheckOutStartDate}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "flex-1 justify-start text-left font-normal",
-                              !checkOutEndDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {checkOutEndDate ? format(checkOutEndDate, "PPP") : "End date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={checkOutEndDate}
-                            onSelect={setCheckOutEndDate}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="time"
+                        value={checkInStartTime}
+                        onChange={(e) => setCheckInStartTime(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="time"
+                        value={checkInEndTime}
+                        onChange={(e) => setCheckInEndTime(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Check-Out Time Range</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={checkOutStartTime}
+                        onChange={(e) => setCheckOutStartTime(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="time"
+                        value={checkOutEndTime}
+                        onChange={(e) => setCheckOutEndTime(e.target.value)}
+                        className="flex-1"
+                      />
                     </div>
                   </div>
                 </div>
