@@ -94,11 +94,11 @@ export default function AdminDashboard() {
     return createdAt >= cutoffDate;
   };
 
-  // Compare dates (created_at is already in UTC+8 from database)
+  // Compare dates (created_at is already in UTC+8 from database after migration)
   const isSameDate = (createdAtStr: string) => {
     const createdAt = new Date(createdAtStr);
     
-    // Get the date portion from created_at (already in UTC+8)
+    // Get the date portion from created_at (it's already in UTC+8)
     const recordYear = createdAt.getUTCFullYear();
     const recordMonth = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
     const recordDay = String(createdAt.getUTCDate()).padStart(2, '0');
