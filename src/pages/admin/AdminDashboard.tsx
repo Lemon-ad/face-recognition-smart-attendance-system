@@ -40,6 +40,8 @@ export default function AdminDashboard() {
   const [selectedDeptForGroup, setSelectedDeptForGroup] = useState<string>('all');
   const [departmentAttendance, setDepartmentAttendance] = useState<any[]>([]);
   const [groupAttendance, setGroupAttendance] = useState<any[]>([]);
+  const [deptAttendancePeriod, setDeptAttendancePeriod] = useState<string>('day');
+  const [groupAttendancePeriod, setGroupAttendancePeriod] = useState<string>('day');
   const [trendDepartment, setTrendDepartment] = useState<string>('all');
   const [trendGroup, setTrendGroup] = useState<string>('all');
   const [trendPeriod, setTrendPeriod] = useState<string>('week');
@@ -52,11 +54,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDepartmentAttendance();
-  }, []);
+  }, [deptAttendancePeriod]);
 
   useEffect(() => {
     fetchGroupAttendance();
-  }, [selectedDeptForGroup]);
+  }, [selectedDeptForGroup, groupAttendancePeriod]);
 
   useEffect(() => {
     fetchTrendData();
@@ -65,6 +67,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAttendanceIssues();
   }, []);
+
+  // Check if record is within date range based on UTC+8
+  const isWithinPeriod = (createdAtStr: string, period: string) => {
+    const createdAt = new Date(createdAtStr);
+    const now = new Date();
+    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    
+    let daysBack = 1;
+    switch (period) {
+      case 'day':
+        daysBack = 1;
+        break;
+      case 'week':
+        daysBack = 7;
+        break;
+      case 'month':
+        daysBack = 30;
+        break;
+      case 'annual':
+        daysBack = 365;
+        break;
+    }
+    
+    const cutoffDate = new Date(malaysiaTime.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    return createdAt >= cutoffDate;
+  };
 
   // Get today's date by comparing created_at dates (which are already in UTC)
   const isSameDate = (createdAtStr: string) => {
@@ -94,18 +122,20 @@ export default function AdminDashboard() {
       .neq('role', 'admin');
     setTotalUsers(userCount || 0);
 
-    // Get all attendance records
+    // Get all attendance records for today
     const { data: allAttendance } = await supabase
       .from('attendance')
-      .select('*')
-      .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+      .select('*');
     
     // Filter by today's date
     const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
     
-    const presentCount = todayAttendance.length;
-    const percentage = userCount ? (presentCount / userCount) * 100 : 0;
-    setPresentToday({ count: presentCount, percentage });
+    // Calculate attendance rate: attendance with check_in_time / total attendance created today
+    const withCheckIn = todayAttendance.filter(record => record.check_in_time !== null).length;
+    const totalToday = todayAttendance.length;
+    const percentage = totalToday > 0 ? (withCheckIn / totalToday) * 100 : 0;
+    
+    setPresentToday({ count: withCheckIn, percentage });
 
     // Fetch departments and groups
     const { data: depts } = await supabase.from('department').select('department_id, department_name');
@@ -126,22 +156,23 @@ export default function AdminDashboard() {
         const { data: allAttendance } = await supabase
           .from('attendance')
           .select('*, users!inner(*)')
-          .eq('users.department_id', dept.department_id)
-          .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+          .eq('users.department_id', dept.department_id);
 
-        // Filter by today's date
-        const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
+        // Filter by period
+        const periodAttendance = allAttendance?.filter(record => 
+          isWithinPeriod(record.created_at, deptAttendancePeriod)
+        ) || [];
 
-        const { count: totalCount } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('department_id', dept.department_id)
-          .neq('role', 'admin');
+        // Calculate attendance rate: with check_in_time / total created in period
+        const withCheckIn = periodAttendance.filter(record => record.check_in_time !== null).length;
+        const totalInPeriod = periodAttendance.length;
+        const rate = totalInPeriod > 0 ? (withCheckIn / totalInPeriod) * 100 : 0;
 
         return {
           name: dept.department_name,
-          value: todayAttendance.length,
-          total: totalCount || 0
+          value: rate,
+          count: withCheckIn,
+          total: totalInPeriod
         };
       })
     );
@@ -162,22 +193,23 @@ export default function AdminDashboard() {
         const { data: allAttendance } = await supabase
           .from('attendance')
           .select('*, users!inner(*)')
-          .eq('users.group_id', group.group_id)
-          .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+          .eq('users.group_id', group.group_id);
 
-        // Filter by today's date
-        const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
+        // Filter by period
+        const periodAttendance = allAttendance?.filter(record => 
+          isWithinPeriod(record.created_at, groupAttendancePeriod)
+        ) || [];
 
-        const { count: totalCount } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('group_id', group.group_id)
-          .neq('role', 'admin');
+        // Calculate attendance rate: with check_in_time / total created in period
+        const withCheckIn = periodAttendance.filter(record => record.check_in_time !== null).length;
+        const totalInPeriod = periodAttendance.length;
+        const rate = totalInPeriod > 0 ? (withCheckIn / totalInPeriod) * 100 : 0;
 
         return {
           name: group.group_name,
-          value: todayAttendance.length,
-          total: totalCount || 0
+          value: rate,
+          count: withCheckIn,
+          total: totalInPeriod
         };
       })
     );
@@ -356,7 +388,20 @@ export default function AdminDashboard() {
             onClick={() => navigate('/admin/attendance')}
           >
             <CardHeader>
-              <CardTitle>Department Attendance</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Department Attendance</span>
+                <Select value={deptAttendancePeriod} onValueChange={setDeptAttendancePeriod}>
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder="Period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Day</SelectItem>
+                    <SelectItem value="week">Week</SelectItem>
+                    <SelectItem value="month">Month</SelectItem>
+                    <SelectItem value="annual">Annual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {departmentAttendance.length > 0 ? (
@@ -367,7 +412,7 @@ export default function AdminDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, total }) => `${name}: ${value}/${total}`}
+                      label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
                       outerRadius={80}
                       fill="hsl(var(--primary))"
                       dataKey="value"
@@ -376,7 +421,10 @@ export default function AdminDashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value: number, name: string, props: any) => [
+                      `${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`,
+                      'Attendance Rate'
+                    ]} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -390,21 +438,34 @@ export default function AdminDashboard() {
             onClick={() => navigate('/admin/attendance')}
           >
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-wrap items-center gap-2 justify-between">
                 <span>Group Attendance</span>
-                <Select value={selectedDeptForGroup} onValueChange={setSelectedDeptForGroup}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.department_id} value={dept.department_id}>
-                        {dept.department_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={selectedDeptForGroup} onValueChange={setSelectedDeptForGroup}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Departments</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.department_id} value={dept.department_id}>
+                          {dept.department_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={groupAttendancePeriod} onValueChange={setGroupAttendancePeriod}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="day">Day</SelectItem>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -416,7 +477,7 @@ export default function AdminDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value, total }) => `${name}: ${value}/${total}`}
+                      label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
                       outerRadius={80}
                       fill="hsl(var(--primary))"
                       dataKey="value"
@@ -425,7 +486,10 @@ export default function AdminDashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(value: number, name: string, props: any) => [
+                      `${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`,
+                      'Attendance Rate'
+                    ]} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
