@@ -229,15 +229,18 @@ export default function DepartmentsAndGroups() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-6 divide-x divide-border">
-          <div className="pr-6">{/* Divider wrapper for departments */}
+        <div className="grid md:grid-cols-2 grid-cols-1 gap-6 md:divide-x divide-border">
+          <div className="md:pr-6">{/* Divider wrapper for departments */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-foreground">Departments</h2>
-              <Button onClick={() => {
-                setSelectedDepartment(null);
-                setDepartmentDialogOpen(true);
-              }}>
+              <Button 
+                onClick={() => {
+                  setSelectedDepartment(null);
+                  setDepartmentDialogOpen(true);
+                }}
+                className="w-full sm:w-auto"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Department
               </Button>
@@ -333,9 +336,9 @@ export default function DepartmentsAndGroups() {
           </div>
           </div>{/* End divider wrapper for departments */}
 
-          <div className="pl-6">{/* Divider wrapper for groups */}
+          <div className="md:pl-6">{/* Divider wrapper for groups */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <h2 className="text-xl font-semibold text-foreground">
                 {selectedDepartmentId 
                   ? `Groups in ${departments.find(d => d.department_id === selectedDepartmentId)?.department_name || 'Department'}`
@@ -347,6 +350,7 @@ export default function DepartmentsAndGroups() {
                   setGroupDialogOpen(true);
                 }}
                 disabled={!selectedDepartmentId}
+                className="w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Group
