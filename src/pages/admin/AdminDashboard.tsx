@@ -66,16 +66,14 @@ export default function AdminDashboard() {
     fetchAttendanceIssues();
   }, []);
 
-  // Compute Asia/Kuala_Lumpur day bounds in UTC
-  const getKLDayBounds = () => {
+  // Get today's date by adding 8 hours to system time
+  const getTodayMalaysiaDate = () => {
     const now = new Date();
-    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const startKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 0, 0, 0, 0));
-    const endKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 23, 59, 59, 999));
-    return {
-      start: new Date(startKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-      end: new Date(endKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-    };
+    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const year = malaysiaTime.getUTCFullYear();
+    const month = String(malaysiaTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(malaysiaTime.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const fetchDashboardData = async () => {
@@ -86,17 +84,23 @@ export default function AdminDashboard() {
       .neq('role', 'admin');
     setTotalUsers(userCount || 0);
 
-    // Present today based on KL timezone (UTC+8)
-    const { start, end } = getKLDayBounds();
-    const { count: presentCount } = await supabase
+    // Get all attendance records
+    const { data: allAttendance } = await supabase
       .from('attendance')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', start)
-      .lt('created_at', end)
+      .select('*')
       .in('status', ['present', 'late', 'early_out', 'no_checkout']);
     
-    const percentage = userCount ? ((presentCount || 0) / userCount) * 100 : 0;
-    setPresentToday({ count: presentCount || 0, percentage });
+    // Filter by today's date (system time + 8 hours)
+    const todayDate = getTodayMalaysiaDate();
+    const todayAttendance = allAttendance?.filter(record => {
+      const createdAt = new Date(record.created_at);
+      const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
+      return recordDate === todayDate;
+    }) || [];
+    
+    const presentCount = todayAttendance.length;
+    const percentage = userCount ? (presentCount / userCount) * 100 : 0;
+    setPresentToday({ count: presentCount, percentage });
 
     // Fetch departments and groups
     const { data: depts } = await supabase.from('department').select('department_id, department_name');
@@ -107,20 +111,26 @@ export default function AdminDashboard() {
   };
 
   const fetchDepartmentAttendance = async () => {
-    const { start, end } = getKLDayBounds();
+    const todayDate = getTodayMalaysiaDate();
     const { data: depts } = await supabase.from('department').select('department_id, department_name');
     
     if (!depts) return;
 
     const deptData = await Promise.all(
       depts.map(async (dept) => {
-        const { count: presentCount } = await supabase
+        // Get all attendance for this department
+        const { data: allAttendance } = await supabase
           .from('attendance')
-          .select('*, users!inner(*)', { count: 'exact', head: true })
+          .select('*, users!inner(*)')
           .eq('users.department_id', dept.department_id)
-          .gte('created_at', start)
-          .lt('created_at', end)
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+
+        // Filter by today's date
+        const todayAttendance = allAttendance?.filter(record => {
+          const createdAt = new Date(record.created_at);
+          const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
+          return recordDate === todayDate;
+        }) || [];
 
         const { count: totalCount } = await supabase
           .from('users')
@@ -130,7 +140,7 @@ export default function AdminDashboard() {
 
         return {
           name: dept.department_name,
-          value: presentCount || 0,
+          value: todayAttendance.length,
           total: totalCount || 0
         };
       })
@@ -140,7 +150,7 @@ export default function AdminDashboard() {
   };
 
   const fetchGroupAttendance = async () => {
-    const { start, end } = getKLDayBounds();
+    const todayDate = getTodayMalaysiaDate();
     let groupsToFetch = groups;
 
     if (selectedDeptForGroup !== 'all') {
@@ -149,13 +159,19 @@ export default function AdminDashboard() {
 
     const groupData = await Promise.all(
       groupsToFetch.map(async (group) => {
-        const { count: presentCount } = await supabase
+        // Get all attendance for this group
+        const { data: allAttendance } = await supabase
           .from('attendance')
-          .select('*, users!inner(*)', { count: 'exact', head: true })
+          .select('*, users!inner(*)')
           .eq('users.group_id', group.group_id)
-          .gte('created_at', start)
-          .lt('created_at', end)
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+
+        // Filter by today's date
+        const todayAttendance = allAttendance?.filter(record => {
+          const createdAt = new Date(record.created_at);
+          const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
+          return recordDate === todayDate;
+        }) || [];
 
         const { count: totalCount } = await supabase
           .from('users')
@@ -165,7 +181,7 @@ export default function AdminDashboard() {
 
         return {
           name: group.group_name,
-          value: presentCount || 0,
+          value: todayAttendance.length,
           total: totalCount || 0
         };
       })
@@ -176,33 +192,28 @@ export default function AdminDashboard() {
 
   const fetchTrendData = async () => {
     const now = new Date();
-    // Convert to Malaysia time (UTC+8)
-    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    let startDate = new Date(klNow);
+    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    let daysBack = 7;
     let dateFormat: Intl.DateTimeFormatOptions = {};
 
     switch (trendPeriod) {
       case 'week':
-        startDate.setDate(klNow.getDate() - 7);
-        dateFormat = { month: 'short', day: 'numeric', timeZone: 'Asia/Kuala_Lumpur' };
+        daysBack = 7;
+        dateFormat = { month: 'short', day: 'numeric' };
         break;
       case 'month':
-        startDate.setMonth(klNow.getMonth() - 1);
-        dateFormat = { month: 'short', day: 'numeric', timeZone: 'Asia/Kuala_Lumpur' };
+        daysBack = 30;
+        dateFormat = { month: 'short', day: 'numeric' };
         break;
       case 'annual':
-        startDate.setFullYear(klNow.getFullYear() - 1);
-        dateFormat = { year: 'numeric', month: 'short', timeZone: 'Asia/Kuala_Lumpur' };
+        daysBack = 365;
+        dateFormat = { year: 'numeric', month: 'short' };
         break;
     }
-
-    // Convert back to UTC for query
-    const startDateUTC = new Date(startDate.getTime() - 8 * 60 * 60 * 1000);
 
     let query = supabase
       .from('attendance')
       .select('created_at, status, users!inner(department_id, group_id)')
-      .gte('created_at', startDateUTC.toISOString())
       .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
     if (trendDepartment !== 'all') {
@@ -220,14 +231,16 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Group by date in Malaysia time
+    // Filter data for the specified period and group by date
     const dateGroups: { [key: string]: number } = {};
+    const cutoffDate = new Date(malaysiaTime.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    
     data.forEach((record) => {
-      // Convert UTC timestamp to Malaysia time
-      const utcDate = new Date(record.created_at);
-      const klDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
-      const date = klDate.toLocaleDateString('en-US', dateFormat);
-      dateGroups[date] = (dateGroups[date] || 0) + 1;
+      const createdAt = new Date(record.created_at);
+      if (createdAt >= cutoffDate) {
+        const date = createdAt.toLocaleDateString('en-US', dateFormat);
+        dateGroups[date] = (dateGroups[date] || 0) + 1;
+      }
     });
 
     const chartData = Object.entries(dateGroups).map(([date, count]) => ({
@@ -240,37 +253,36 @@ export default function AdminDashboard() {
 
   const fetchAttendanceIssues = async () => {
     const now = new Date();
-    // Convert to Malaysia time (UTC+8)
-    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const weekStart = new Date(klNow);
-    weekStart.setDate(klNow.getDate() - klNow.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    
-    // Convert back to UTC for query
-    const weekStartUTC = new Date(weekStart.getTime() - 8 * 60 * 60 * 1000);
+    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const daysBack = 7;
 
     const { data } = await supabase
       .from('attendance')
       .select('user_id, check_in_time, created_at, status, users!inner(first_name, last_name)')
-      .gte('created_at', weekStartUTC.toISOString())
       .in('status', ['late', 'absent', 'early_out', 'no_checkout'])
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(50); // Get more records to filter
 
     if (data) {
-      const issues = data.map((record: any) => {
-        // Convert UTC to Malaysia time for display
-        const utcDate = new Date(record.created_at);
-        const klDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
-        return {
-          user_id: record.user_id,
-          first_name: record.users.first_name,
-          last_name: record.users.last_name,
-          status: record.status,
-          check_in_time: record.check_in_time,
-          date: klDate.toLocaleDateString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })
-        };
-      });
+      const cutoffDate = new Date(malaysiaTime.getTime() - daysBack * 24 * 60 * 60 * 1000);
+      
+      const issues = data
+        .filter(record => {
+          const createdAt = new Date(record.created_at);
+          return createdAt >= cutoffDate;
+        })
+        .slice(0, 10) // Take only top 10 after filtering
+        .map((record: any) => {
+          const createdAt = new Date(record.created_at);
+          return {
+            user_id: record.user_id,
+            first_name: record.users.first_name,
+            last_name: record.users.last_name,
+            status: record.status,
+            check_in_time: record.check_in_time,
+            date: createdAt.toLocaleDateString('en-MY')
+          };
+        });
       setAttendanceIssues(issues);
     }
   };
