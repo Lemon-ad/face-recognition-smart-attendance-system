@@ -100,7 +100,7 @@ export default function MemberDashboard() {
     };
 
     const presentCount = periodRecords.filter(r => 
-      r.status === 'present' || r.status === 'late'
+      r.check_in_time !== null
     ).length;
     
     const onTimeCount = periodRecords.filter(r => r.status === 'present').length;
