@@ -218,7 +218,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      daily_attendance_reset: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      mark_daily_absent: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       attendance_status_enum:
