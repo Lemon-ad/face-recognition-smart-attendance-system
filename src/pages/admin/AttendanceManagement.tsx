@@ -30,6 +30,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -87,6 +89,11 @@ export default function AttendanceManagement() {
   const [checkOutStartTime, setCheckOutStartTime] = useState('');
   const [checkOutEndTime, setCheckOutEndTime] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Early out dialog states
+  const [showEarlyOutDialog, setShowEarlyOutDialog] = useState(false);
+  const [selectedAttendanceId, setSelectedAttendanceId] = useState<string>('');
+  const [earlyOutTime, setEarlyOutTime] = useState('');
 
   useEffect(() => {
     fetchDepartments();
@@ -304,13 +311,26 @@ export default function AttendanceManagement() {
   };
 
   const handleStatusChange = async (attendanceId: string, newStatus: 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent') => {
+    // If early_out, show dialog to input check_out_time
+    if (newStatus === 'early_out') {
+      setSelectedAttendanceId(attendanceId);
+      setShowEarlyOutDialog(true);
+      return;
+    }
+
     try {
       // Prepare update data
       const updateData: any = { status: newStatus };
       
-      // If status is changed to absent, clear check_in_time
+      // If status is changed to absent, clear both check_in_time and check_out_time
       if (newStatus === 'absent') {
         updateData.check_in_time = null;
+        updateData.check_out_time = null;
+      }
+      
+      // If status is changed to no_checkout, clear check_out_time
+      if (newStatus === 'no_checkout') {
+        updateData.check_out_time = null;
       }
       
       const { error } = await supabase
@@ -325,6 +345,39 @@ export default function AttendanceManagement() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  const handleEarlyOutSubmit = async () => {
+    if (!earlyOutTime) {
+      toast.error('Please enter check-out time');
+      return;
+    }
+
+    try {
+      // Create a timestamp from the time input
+      const now = new Date();
+      const [hours, minutes] = earlyOutTime.split(':');
+      const checkOutTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+
+      const { error } = await supabase
+        .from('attendance')
+        .update({ 
+          status: 'early_out',
+          check_out_time: checkOutTimestamp.toISOString()
+        })
+        .eq('attendance_id', selectedAttendanceId);
+
+      if (error) throw error;
+
+      toast.success('Early out time updated successfully');
+      setShowEarlyOutDialog(false);
+      setEarlyOutTime('');
+      setSelectedAttendanceId('');
+      fetchAttendanceData();
+    } catch (error) {
+      console.error('Error updating early out time:', error);
+      toast.error('Failed to update early out time');
     }
   };
 
@@ -412,6 +465,37 @@ export default function AttendanceManagement() {
 
   return (
     <DashboardLayout>
+      {/* Early Out Dialog */}
+      <Dialog open={showEarlyOutDialog} onOpenChange={setShowEarlyOutDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Early Check-Out Time</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="early-out-time">Check-Out Time</Label>
+            <Input
+              id="early-out-time"
+              type="time"
+              value={earlyOutTime}
+              onChange={(e) => setEarlyOutTime(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowEarlyOutDialog(false);
+              setEarlyOutTime('');
+              setSelectedAttendanceId('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleEarlyOutSubmit}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Attendance Management</h1>
