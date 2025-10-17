@@ -305,9 +305,17 @@ export default function AttendanceManagement() {
 
   const handleStatusChange = async (attendanceId: string, newStatus: 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent') => {
     try {
+      // Prepare update data
+      const updateData: any = { status: newStatus };
+      
+      // If status is changed to absent, clear check_in_time
+      if (newStatus === 'absent') {
+        updateData.check_in_time = null;
+      }
+      
       const { error } = await supabase
         .from('attendance')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('attendance_id', attendanceId);
 
       if (error) throw error;

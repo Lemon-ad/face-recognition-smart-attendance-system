@@ -50,6 +50,27 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    
+    // Set up real-time subscription for attendance changes
+    const channel = supabase
+      .channel('attendance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'attendance'
+        },
+        () => {
+          // Refresh dashboard data when attendance changes
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
