@@ -104,6 +104,7 @@ export default function MemberDashboard() {
         attendancePercentage: 0,
         onTimeRate: 0,
         totalDays: 0,
+        issuesPercentage: 0,
       };
     }
 
@@ -136,12 +137,19 @@ export default function MemberDashboard() {
     const attendancePercentage = Math.round((presentCount / workingDays) * 100);
     const onTimeRate = presentCount > 0 ? Math.round((onTimeCount / presentCount) * 100) : 0;
 
+    // Calculate issues percentage
+    const issuesCount = periodRecords.filter(r => 
+      ['late', 'absent', 'early_out', 'no_checkout'].includes(r.status)
+    ).length;
+    const issuesPercentage = workingDays > 0 ? Math.round((issuesCount / workingDays) * 100) : 0;
+
     return {
       todayStatus: todayRecord ? todayRecord.status : 'No Record',
       todayStatusBadge: todayRecord ? getStatusBadge(todayRecord.status) : 'secondary' as const,
       attendancePercentage: isNaN(attendancePercentage) ? 0 : attendancePercentage,
       onTimeRate: isNaN(onTimeRate) ? 0 : onTimeRate,
       totalDays: presentCount,
+      issuesPercentage,
     };
   }, [attendanceRecords, attendancePeriod]);
 
@@ -286,7 +294,7 @@ export default function MemberDashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">{attendanceIssues.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Attendance issues
+                  {stats.issuesPercentage}% of total attendance
                 </p>
               </CardContent>
             </Card>
