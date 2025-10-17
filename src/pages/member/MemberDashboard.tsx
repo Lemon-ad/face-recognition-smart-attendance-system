@@ -158,24 +158,25 @@ export default function MemberDashboard() {
       return recordDate >= start && recordDate <= end;
     });
 
-    const groupedByDate: Record<string, { present: number, late: number, absent: number, date: Date }> = {};
+    const groupedByDate: Record<string, { attended: number, date: Date }> = {};
     
     periodRecords.forEach(record => {
       const recordDate = new Date(record.created_at);
       const dateKey = format(recordDate, 'MMM dd');
       if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = { present: 0, late: 0, absent: 0, date: recordDate };
+        groupedByDate[dateKey] = { attended: 0, date: recordDate };
       }
       
-      if (record.status === 'present') groupedByDate[dateKey].present++;
-      else if (record.status === 'late') groupedByDate[dateKey].late++;
-      else if (record.status === 'absent') groupedByDate[dateKey].absent++;
+      // Count any record with check_in_time as present
+      if (record.check_in_time !== null) {
+        groupedByDate[dateKey].attended++;
+      }
     });
 
     return Object.entries(groupedByDate)
       .map(([dateKey, counts]) => ({
         date: dateKey,
-        attendance: counts.present + counts.late,
+        attendance: counts.attended,
         sortDate: counts.date,
       }))
       .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
