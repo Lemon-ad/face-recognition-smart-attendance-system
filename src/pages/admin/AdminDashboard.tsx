@@ -68,7 +68,7 @@ export default function AdminDashboard() {
     fetchAttendanceIssues();
   }, []);
 
-  // Check if record is within date range based on UTC+8
+  // Check if record is within date range (created_at is already in UTC+8)
   const isWithinPeriod = (createdAtStr: string, period: string) => {
     const createdAt = new Date(createdAtStr);
     const now = new Date();
@@ -94,19 +94,17 @@ export default function AdminDashboard() {
     return createdAt >= cutoffDate;
   };
 
-  // Get today's date by comparing created_at dates (which are already in UTC)
+  // Compare dates (created_at is already in UTC+8 from database)
   const isSameDate = (createdAtStr: string) => {
-    const createdAtUTC = new Date(createdAtStr);
-    // Convert created_at to Malaysia time by adding 8 hours
-    const createdAtMalaysia = new Date(createdAtUTC.getTime() + 8 * 60 * 60 * 1000);
+    const createdAt = new Date(createdAtStr);
     
-    // Get the date portion from created_at in Malaysia time (YYYY-MM-DD)
-    const recordYear = createdAtMalaysia.getUTCFullYear();
-    const recordMonth = String(createdAtMalaysia.getUTCMonth() + 1).padStart(2, '0');
-    const recordDay = String(createdAtMalaysia.getUTCDate()).padStart(2, '0');
+    // Get the date portion from created_at (already in UTC+8)
+    const recordYear = createdAt.getUTCFullYear();
+    const recordMonth = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
+    const recordDay = String(createdAt.getUTCDate()).padStart(2, '0');
     const recordDate = `${recordYear}-${recordMonth}-${recordDay}`;
     
-    // Get today's date by adding 8 hours to system time
+    // Get today's date in Malaysia time
     const now = new Date();
     const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
     const todayYear = malaysiaTime.getUTCFullYear();
