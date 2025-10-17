@@ -94,6 +94,10 @@ export default function AttendanceManagement() {
   const [showEarlyOutDialog, setShowEarlyOutDialog] = useState(false);
   const [selectedAttendanceId, setSelectedAttendanceId] = useState<string>('');
   const [earlyOutTime, setEarlyOutTime] = useState('');
+  
+  // Present dialog states
+  const [showPresentDialog, setShowPresentDialog] = useState(false);
+  const [checkInTime, setCheckInTime] = useState('');
 
   useEffect(() => {
     fetchDepartments();
@@ -311,6 +315,13 @@ export default function AttendanceManagement() {
   };
 
   const handleStatusChange = async (attendanceId: string, newStatus: 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent') => {
+    // If present, show dialog to input check_in_time
+    if (newStatus === 'present') {
+      setSelectedAttendanceId(attendanceId);
+      setShowPresentDialog(true);
+      return;
+    }
+    
     // If early_out, show dialog to input check_out_time
     if (newStatus === 'early_out') {
       setSelectedAttendanceId(attendanceId);
@@ -345,6 +356,39 @@ export default function AttendanceManagement() {
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status');
+    }
+  };
+
+  const handlePresentSubmit = async () => {
+    if (!checkInTime) {
+      toast.error('Please enter check-in time');
+      return;
+    }
+
+    try {
+      // Create a timestamp from the time input
+      const now = new Date();
+      const [hours, minutes] = checkInTime.split(':');
+      const checkInTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+
+      const { error } = await supabase
+        .from('attendance')
+        .update({ 
+          status: 'present',
+          check_in_time: checkInTimestamp.toISOString()
+        })
+        .eq('attendance_id', selectedAttendanceId);
+
+      if (error) throw error;
+
+      toast.success('Check-in time updated successfully');
+      setShowPresentDialog(false);
+      setCheckInTime('');
+      setSelectedAttendanceId('');
+      fetchAttendanceData();
+    } catch (error) {
+      console.error('Error updating check-in time:', error);
+      toast.error('Failed to update check-in time');
     }
   };
 
@@ -465,6 +509,37 @@ export default function AttendanceManagement() {
 
   return (
     <DashboardLayout>
+      {/* Present Dialog */}
+      <Dialog open={showPresentDialog} onOpenChange={setShowPresentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Check-In Time</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="check-in-time">Check-In Time</Label>
+            <Input
+              id="check-in-time"
+              type="time"
+              value={checkInTime}
+              onChange={(e) => setCheckInTime(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPresentDialog(false);
+              setCheckInTime('');
+              setSelectedAttendanceId('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handlePresentSubmit}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Early Out Dialog */}
       <Dialog open={showEarlyOutDialog} onOpenChange={setShowEarlyOutDialog}>
         <DialogContent>
