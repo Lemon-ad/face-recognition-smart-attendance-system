@@ -17,8 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { History, FileDown, CalendarIcon, X } from 'lucide-react';
-import { AttendanceHistoryDialog } from '@/components/AttendanceHistoryDialog';
+import { FileDown, CalendarIcon, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +64,7 @@ interface AttendanceData {
     check_out_time: string | null;
     status: string;
     location: string | null;
+    created_at: string;
   } | null;
   group: Group | null;
 }
@@ -77,7 +77,6 @@ export default function AttendanceManagement() {
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
   const [filteredData, setFilteredData] = useState<AttendanceData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   
   // Filter states
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -157,18 +156,6 @@ export default function AttendanceManagement() {
     }
   };
 
-  // Compute Asia/Kuala_Lumpur day bounds in UTC
-  const getKLDayBounds = () => {
-    const now = new Date();
-    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const startKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 0, 0, 0, 0));
-    const endKL = new Date(Date.UTC(klNow.getUTCFullYear(), klNow.getUTCMonth(), klNow.getUTCDate(), 23, 59, 59, 999));
-    return {
-      start: new Date(startKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-      end: new Date(endKL.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-    };
-  };
-
   const fetchAttendanceData = async () => {
     try {
       setLoading(true);
@@ -186,15 +173,11 @@ export default function AttendanceManagement() {
       const { data: users, error: usersError } = await usersQuery;
       if (usersError) throw usersError;
 
-      // Get today's date in KL timezone bounds
-      const { start, end } = getKLDayBounds();
-
-      // Fetch attendance records for today
+      // Fetch all attendance records (no date filtering)
       const { data: attendanceRecords, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
-        .gte('created_at', start)
-        .lt('created_at', end);
+        .order('created_at', { ascending: false });
 
       if (attendanceError) throw attendanceError;
 
@@ -205,30 +188,30 @@ export default function AttendanceManagement() {
 
       if (groupsError) throw groupsError;
 
-      // Map users with their attendance
-      const mappedData: AttendanceData[] = (users || []).map(user => {
-        const userAttendance = attendanceRecords?.find(a => a.user_id === user.user_id);
-        const userGroup = groupsData?.find(g => g.group_id === user.group_id);
+      // Map attendance records with user data
+      const mappedData: AttendanceData[] = (attendanceRecords || [])
+        .filter(record => {
+          // Filter by selected users
+          const user = users?.find(u => u.user_id === record.user_id);
+          return user !== undefined;
+        })
+        .map(record => {
+          const user = users?.find(u => u.user_id === record.user_id)!;
+          const userGroup = groupsData?.find(g => g.group_id === user.group_id);
 
-        let status = 'absent';
-        if (userAttendance) {
-          // Trust the database status written by the edge function
-          status = userAttendance.status || 'absent';
-        }
-
-
-        return {
-          user,
-          attendance: userAttendance ? {
-            attendance_id: userAttendance.attendance_id,
-            check_in_time: userAttendance.check_in_time,
-            check_out_time: userAttendance.check_out_time,
-            status,
-            location: userAttendance.location,
-          } : null,
-          group: userGroup || null,
-        };
-      });
+          return {
+            user,
+            attendance: {
+              attendance_id: record.attendance_id,
+              check_in_time: record.check_in_time,
+              check_out_time: record.check_out_time,
+              status: record.status || 'absent',
+              location: record.location,
+              created_at: record.created_at,
+            },
+            group: userGroup || null,
+          };
+        });
 
       setAttendanceData(mappedData);
       setFilteredData(mappedData);
@@ -438,13 +421,6 @@ export default function AttendanceManagement() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button
-                  variant="outline"
-                  onClick={() => setHistoryDialogOpen(true)}
-                >
-                  <History className="h-4 w-4 mr-2" />
-                  View History
-                </Button>
               </div>
             </div>
             <div className="space-y-4 mt-4">
@@ -642,13 +618,14 @@ export default function AttendanceManagement() {
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
-                        {attendanceData.length === 0 ? 'No users found in selected department/group' : 'No results match the current filters'}
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        {attendanceData.length === 0 ? 'No attendance records found' : 'No results match the current filters'}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -688,6 +665,11 @@ export default function AttendanceManagement() {
                             <Badge variant="destructive">Absent</Badge>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {data.attendance?.created_at
+                            ? format(new Date(data.attendance.created_at), 'MMM dd, yyyy HH:mm')
+                            : '-'}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -697,11 +679,6 @@ export default function AttendanceManagement() {
           </CardContent>
         </Card>
       </div>
-
-      <AttendanceHistoryDialog 
-        open={historyDialogOpen} 
-        onOpenChange={setHistoryDialogOpen}
-      />
     </DashboardLayout>
   );
 }
