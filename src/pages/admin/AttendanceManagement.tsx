@@ -507,6 +507,44 @@ export default function AttendanceManagement() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
+                    <label className="text-sm font-medium mb-2 block">Check-In Time Range</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={checkInStartTime}
+                        onChange={(e) => setCheckInStartTime(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="time"
+                        value={checkInEndTime}
+                        onChange={(e) => setCheckInEndTime(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Check-Out Time Range</label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={checkOutStartTime}
+                        onChange={(e) => setCheckOutStartTime(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="time"
+                        value={checkOutEndTime}
+                        onChange={(e) => setCheckOutEndTime(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 mt-4">
+                  <div>
                     <label className="text-sm font-medium mb-2 block">Created At Date Range</label>
                     <div className="flex gap-2">
                       <Popover>
@@ -555,44 +593,6 @@ export default function AttendanceManagement() {
                           />
                         </PopoverContent>
                       </Popover>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Check-In Time Range</label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="time"
-                        value={checkInStartTime}
-                        onChange={(e) => setCheckInStartTime(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Input
-                        type="time"
-                        value={checkInEndTime}
-                        onChange={(e) => setCheckInEndTime(e.target.value)}
-                        className="flex-1"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 mt-4">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Check-Out Time Range</label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="time"
-                        value={checkOutStartTime}
-                        onChange={(e) => setCheckOutStartTime(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Input
-                        type="time"
-                        value={checkOutEndTime}
-                        onChange={(e) => setCheckOutEndTime(e.target.value)}
-                        className="flex-1"
-                      />
                     </div>
                   </div>
                 </div>
