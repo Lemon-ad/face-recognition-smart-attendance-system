@@ -131,23 +131,28 @@ export default function MemberDashboard() {
       return recordDate >= start && recordDate <= end;
     });
 
-    const groupedByDate: Record<string, { present: number, late: number, absent: number }> = {};
+    const groupedByDate: Record<string, { present: number, late: number, absent: number, date: Date }> = {};
     
     periodRecords.forEach(record => {
-      const date = format(new Date(record.created_at), 'MMM dd');
-      if (!groupedByDate[date]) {
-        groupedByDate[date] = { present: 0, late: 0, absent: 0 };
+      const recordDate = new Date(record.created_at);
+      const dateKey = format(recordDate, 'MMM dd');
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = { present: 0, late: 0, absent: 0, date: recordDate };
       }
       
-      if (record.status === 'present') groupedByDate[date].present++;
-      else if (record.status === 'late') groupedByDate[date].late++;
-      else if (record.status === 'absent') groupedByDate[date].absent++;
+      if (record.status === 'present') groupedByDate[dateKey].present++;
+      else if (record.status === 'late') groupedByDate[dateKey].late++;
+      else if (record.status === 'absent') groupedByDate[dateKey].absent++;
     });
 
-    return Object.entries(groupedByDate).map(([date, counts]) => ({
-      date,
-      attendance: counts.present + counts.late,
-    })).slice(-14);
+    return Object.entries(groupedByDate)
+      .map(([dateKey, counts]) => ({
+        date: dateKey,
+        attendance: counts.present + counts.late,
+        sortDate: counts.date,
+      }))
+      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+      .slice(-14);
   }, [attendanceRecords, trendPeriod]);
 
   const getStatusBadge = (status: string) => {
