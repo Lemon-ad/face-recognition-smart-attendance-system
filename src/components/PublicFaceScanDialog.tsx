@@ -215,7 +215,7 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
               ref={videoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover scale-x-[-1]"
             />
             <canvas ref={canvasRef} className="hidden" />
             {!stream && (
