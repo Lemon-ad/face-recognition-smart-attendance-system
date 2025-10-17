@@ -125,19 +125,17 @@ export default function AdminDashboard() {
       .neq('role', 'admin');
     setTotalUsers(userCount || 0);
 
-    // Get all attendance records for today
+    // Get all attendance records
     const { data: allAttendance } = await supabase
       .from('attendance')
       .select('*');
     
     console.log('All attendance records:', allAttendance);
     
-    // Filter by today's date
-    const todayAttendance = allAttendance?.filter(record => {
-      const isToday = isSameDate(record.created_at);
-      console.log(`Record ${record.attendance_id}: created_at=${record.created_at}, isToday=${isToday}, check_in_time=${record.check_in_time}`);
-      return isToday;
-    }) || [];
+    // Filter by today (using isWithinPeriod for 'day' like department attendance does)
+    const todayAttendance = allAttendance?.filter(record => 
+      isWithinPeriod(record.created_at, 'day')
+    ) || [];
     
     console.log('Today attendance:', todayAttendance);
     
