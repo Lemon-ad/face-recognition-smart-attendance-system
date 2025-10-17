@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { ClipboardCheck, Clock, Calendar, AlertCircle, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useEffect } from 'react';
 import { format, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, isToday, parseISO } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -16,6 +16,7 @@ type Period = 'week' | 'month' | 'annual';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [attendancePeriod, setAttendancePeriod] = useState<Period>('month');
   const [trendPeriod, setTrendPeriod] = useState<Period>('month');
 
@@ -46,6 +47,32 @@ export default function MemberDashboard() {
     },
     enabled: !!userProfile?.user_id,
   });
+
+  // Set up real-time subscription for attendance changes
+  useEffect(() => {
+    if (!userProfile?.user_id) return;
+
+    const channel = supabase
+      .channel('member-attendance-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendance',
+          filter: `user_id=eq.${userProfile.user_id}`
+        },
+        () => {
+          // Refresh attendance data when any change occurs for this user
+          queryClient.invalidateQueries({ queryKey: ['member-attendance', userProfile.user_id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userProfile?.user_id, queryClient]);
 
   const getPeriodDates = (period: Period) => {
     const now = new Date();
