@@ -66,14 +66,24 @@ export default function AdminDashboard() {
     fetchAttendanceIssues();
   }, []);
 
-  // Get today's date by adding 8 hours to system time
-  const getTodayMalaysiaDate = () => {
+  // Get today's date by comparing created_at dates (which are already in UTC)
+  const isSameDate = (createdAtStr: string) => {
+    const createdAt = new Date(createdAtStr);
+    // Get the date portion from created_at (YYYY-MM-DD)
+    const recordYear = createdAt.getUTCFullYear();
+    const recordMonth = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
+    const recordDay = String(createdAt.getUTCDate()).padStart(2, '0');
+    const recordDate = `${recordYear}-${recordMonth}-${recordDay}`;
+    
+    // Get today's date by adding 8 hours to system time
     const now = new Date();
     const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const year = malaysiaTime.getUTCFullYear();
-    const month = String(malaysiaTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(malaysiaTime.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const todayYear = malaysiaTime.getUTCFullYear();
+    const todayMonth = String(malaysiaTime.getUTCMonth() + 1).padStart(2, '0');
+    const todayDay = String(malaysiaTime.getUTCDate()).padStart(2, '0');
+    const todayDate = `${todayYear}-${todayMonth}-${todayDay}`;
+    
+    return recordDate === todayDate;
   };
 
   const fetchDashboardData = async () => {
@@ -90,13 +100,8 @@ export default function AdminDashboard() {
       .select('*')
       .in('status', ['present', 'late', 'early_out', 'no_checkout']);
     
-    // Filter by today's date (system time + 8 hours)
-    const todayDate = getTodayMalaysiaDate();
-    const todayAttendance = allAttendance?.filter(record => {
-      const createdAt = new Date(record.created_at);
-      const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
-      return recordDate === todayDate;
-    }) || [];
+    // Filter by today's date
+    const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
     
     const presentCount = todayAttendance.length;
     const percentage = userCount ? (presentCount / userCount) * 100 : 0;
@@ -111,7 +116,6 @@ export default function AdminDashboard() {
   };
 
   const fetchDepartmentAttendance = async () => {
-    const todayDate = getTodayMalaysiaDate();
     const { data: depts } = await supabase.from('department').select('department_id, department_name');
     
     if (!depts) return;
@@ -126,11 +130,7 @@ export default function AdminDashboard() {
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
         // Filter by today's date
-        const todayAttendance = allAttendance?.filter(record => {
-          const createdAt = new Date(record.created_at);
-          const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
-          return recordDate === todayDate;
-        }) || [];
+        const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
 
         const { count: totalCount } = await supabase
           .from('users')
@@ -150,7 +150,6 @@ export default function AdminDashboard() {
   };
 
   const fetchGroupAttendance = async () => {
-    const todayDate = getTodayMalaysiaDate();
     let groupsToFetch = groups;
 
     if (selectedDeptForGroup !== 'all') {
@@ -167,11 +166,7 @@ export default function AdminDashboard() {
           .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
         // Filter by today's date
-        const todayAttendance = allAttendance?.filter(record => {
-          const createdAt = new Date(record.created_at);
-          const recordDate = `${createdAt.getUTCFullYear()}-${String(createdAt.getUTCMonth() + 1).padStart(2, '0')}-${String(createdAt.getUTCDate()).padStart(2, '0')}`;
-          return recordDate === todayDate;
-        }) || [];
+        const todayAttendance = allAttendance?.filter(record => isSameDate(record.created_at)) || [];
 
         const { count: totalCount } = await supabase
           .from('users')
