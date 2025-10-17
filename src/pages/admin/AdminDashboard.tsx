@@ -176,28 +176,33 @@ export default function AdminDashboard() {
 
   const fetchTrendData = async () => {
     const now = new Date();
-    let startDate = new Date();
+    // Convert to Malaysia time (UTC+8)
+    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    let startDate = new Date(klNow);
     let dateFormat: Intl.DateTimeFormatOptions = {};
 
     switch (trendPeriod) {
       case 'week':
-        startDate.setDate(now.getDate() - 7);
-        dateFormat = { month: 'short', day: 'numeric' };
+        startDate.setDate(klNow.getDate() - 7);
+        dateFormat = { month: 'short', day: 'numeric', timeZone: 'Asia/Kuala_Lumpur' };
         break;
       case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        dateFormat = { month: 'short', day: 'numeric' };
+        startDate.setMonth(klNow.getMonth() - 1);
+        dateFormat = { month: 'short', day: 'numeric', timeZone: 'Asia/Kuala_Lumpur' };
         break;
       case 'annual':
-        startDate.setFullYear(now.getFullYear() - 1);
-        dateFormat = { year: 'numeric', month: 'short' };
+        startDate.setFullYear(klNow.getFullYear() - 1);
+        dateFormat = { year: 'numeric', month: 'short', timeZone: 'Asia/Kuala_Lumpur' };
         break;
     }
+
+    // Convert back to UTC for query
+    const startDateUTC = new Date(startDate.getTime() - 8 * 60 * 60 * 1000);
 
     let query = supabase
       .from('attendance')
       .select('created_at, status, users!inner(department_id, group_id)')
-      .gte('created_at', startDate.toISOString())
+      .gte('created_at', startDateUTC.toISOString())
       .in('status', ['present', 'late', 'early_out', 'no_checkout']);
 
     if (trendDepartment !== 'all') {
@@ -215,10 +220,13 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Group by date
+    // Group by date in Malaysia time
     const dateGroups: { [key: string]: number } = {};
     data.forEach((record) => {
-      const date = new Date(record.created_at).toLocaleDateString('en-US', dateFormat);
+      // Convert UTC timestamp to Malaysia time
+      const utcDate = new Date(record.created_at);
+      const klDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+      const date = klDate.toLocaleDateString('en-US', dateFormat);
       dateGroups[date] = (dateGroups[date] || 0) + 1;
     });
 
@@ -232,26 +240,37 @@ export default function AdminDashboard() {
 
   const fetchAttendanceIssues = async () => {
     const now = new Date();
-    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+    // Convert to Malaysia time (UTC+8)
+    const klNow = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const weekStart = new Date(klNow);
+    weekStart.setDate(klNow.getDate() - klNow.getDay());
     weekStart.setHours(0, 0, 0, 0);
+    
+    // Convert back to UTC for query
+    const weekStartUTC = new Date(weekStart.getTime() - 8 * 60 * 60 * 1000);
 
     const { data } = await supabase
       .from('attendance')
       .select('user_id, check_in_time, created_at, status, users!inner(first_name, last_name)')
-      .gte('created_at', weekStart.toISOString())
+      .gte('created_at', weekStartUTC.toISOString())
       .in('status', ['late', 'absent', 'early_out', 'no_checkout'])
       .order('created_at', { ascending: false })
       .limit(10);
 
     if (data) {
-      const issues = data.map((record: any) => ({
-        user_id: record.user_id,
-        first_name: record.users.first_name,
-        last_name: record.users.last_name,
-        status: record.status,
-        check_in_time: record.check_in_time,
-        date: new Date(record.created_at).toLocaleDateString()
-      }));
+      const issues = data.map((record: any) => {
+        // Convert UTC to Malaysia time for display
+        const utcDate = new Date(record.created_at);
+        const klDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000);
+        return {
+          user_id: record.user_id,
+          first_name: record.users.first_name,
+          last_name: record.users.last_name,
+          status: record.status,
+          check_in_time: record.check_in_time,
+          date: klDate.toLocaleDateString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })
+        };
+      });
       setAttendanceIssues(issues);
     }
   };
