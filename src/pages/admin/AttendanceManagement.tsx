@@ -30,7 +30,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -98,6 +98,10 @@ export default function AttendanceManagement() {
   // Present dialog states
   const [showPresentDialog, setShowPresentDialog] = useState(false);
   const [checkInTime, setCheckInTime] = useState('');
+  
+  // Late dialog states
+  const [showLateDialog, setShowLateDialog] = useState(false);
+  const [lateCheckInTime, setLateCheckInTime] = useState('');
 
   useEffect(() => {
     fetchDepartments();
@@ -322,6 +326,13 @@ export default function AttendanceManagement() {
       return;
     }
     
+    // If late, show dialog to input check_in_time
+    if (newStatus === 'late') {
+      setSelectedAttendanceId(attendanceId);
+      setShowLateDialog(true);
+      return;
+    }
+    
     // If early_out, show dialog to input check_out_time
     if (newStatus === 'early_out') {
       setSelectedAttendanceId(attendanceId);
@@ -389,6 +400,39 @@ export default function AttendanceManagement() {
     } catch (error) {
       console.error('Error updating check-in time:', error);
       toast.error('Failed to update check-in time');
+    }
+  };
+
+  const handleLateSubmit = async () => {
+    if (!lateCheckInTime) {
+      toast.error('Please enter check-in time');
+      return;
+    }
+
+    try {
+      // Create a timestamp from the time input
+      const now = new Date();
+      const [hours, minutes] = lateCheckInTime.split(':');
+      const checkInTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(hours), parseInt(minutes));
+
+      const { error } = await supabase
+        .from('attendance')
+        .update({ 
+          status: 'late',
+          check_in_time: checkInTimestamp.toISOString()
+        })
+        .eq('attendance_id', selectedAttendanceId);
+
+      if (error) throw error;
+
+      toast.success('Late check-in time updated successfully');
+      setShowLateDialog(false);
+      setLateCheckInTime('');
+      setSelectedAttendanceId('');
+      fetchAttendanceData();
+    } catch (error) {
+      console.error('Error updating late check-in time:', error);
+      toast.error('Failed to update late check-in time');
     }
   };
 
@@ -514,6 +558,7 @@ export default function AttendanceManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Set Check-In Time</DialogTitle>
+            <DialogDescription>Enter the check-in time for this attendance record.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="check-in-time">Check-In Time</Label>
@@ -540,11 +585,44 @@ export default function AttendanceManagement() {
         </DialogContent>
       </Dialog>
 
+      {/* Late Dialog */}
+      <Dialog open={showLateDialog} onOpenChange={setShowLateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Late Check-In Time</DialogTitle>
+            <DialogDescription>Enter the late check-in time for this attendance record.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="late-check-in-time">Check-In Time</Label>
+            <Input
+              id="late-check-in-time"
+              type="time"
+              value={lateCheckInTime}
+              onChange={(e) => setLateCheckInTime(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowLateDialog(false);
+              setLateCheckInTime('');
+              setSelectedAttendanceId('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleLateSubmit}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Early Out Dialog */}
       <Dialog open={showEarlyOutDialog} onOpenChange={setShowEarlyOutDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Set Early Check-Out Time</DialogTitle>
+            <DialogDescription>Enter the early check-out time for this attendance record.</DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Label htmlFor="early-out-time">Check-Out Time</Label>
@@ -793,7 +871,7 @@ export default function AttendanceManagement() {
                     </TableRow>
                   ) : (
                     filteredData.map((data) => (
-                      <TableRow key={data.user.user_id}>
+                      <TableRow key={data.attendance?.attendance_id || data.user.user_id}>
                         <TableCell className="font-medium">
                           {getUserName(data.user)}
                         </TableCell>
