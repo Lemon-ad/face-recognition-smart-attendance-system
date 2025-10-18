@@ -146,7 +146,8 @@ export default function AdminDashboard() {
       .from('users')
       .select('*', { count: 'exact', head: true })
       .neq('role', 'admin');
-    setTotalUsers(userCount || 0);
+    const totalUserCount = userCount || 0;
+    setTotalUsers(totalUserCount);
 
     // Get all attendance records
     const { data: allAttendance } = await supabase
@@ -162,12 +163,11 @@ export default function AdminDashboard() {
     
     console.log('Today attendance:', todayAttendance);
     
-    // Calculate attendance rate: attendance with check_in_time / total attendance created today
+    // Calculate attendance rate: users who checked in today / total users
     const withCheckIn = todayAttendance.filter(record => record.check_in_time !== null).length;
-    const totalToday = todayAttendance.length;
-    const percentage = totalToday > 0 ? (withCheckIn / totalToday) * 100 : 0;
+    const percentage = totalUserCount > 0 ? (withCheckIn / totalUserCount) * 100 : 0;
     
-    console.log(`Present today: ${withCheckIn}/${totalToday} = ${percentage}%`);
+    console.log(`Present today: ${withCheckIn}/${totalUserCount} = ${percentage}%`);
     
     setPresentToday({ count: withCheckIn, percentage });
 
