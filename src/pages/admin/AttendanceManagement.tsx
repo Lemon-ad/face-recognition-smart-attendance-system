@@ -886,8 +886,8 @@ export default function AttendanceManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
+                    <TableHead>Check In (UTC+8)</TableHead>
+                    <TableHead>Check Out (UTC+8)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created At</TableHead>
                   </TableRow>
