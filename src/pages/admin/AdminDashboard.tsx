@@ -78,8 +78,10 @@ export default function AdminDashboard() {
   }, [deptAttendancePeriod]);
 
   useEffect(() => {
-    fetchGroupAttendance();
-  }, [selectedDeptForGroup, groupAttendancePeriod]);
+    if (groups.length > 0) {
+      fetchGroupAttendance();
+    }
+  }, [selectedDeptForGroup, groupAttendancePeriod, groups]);
 
   useEffect(() => {
     fetchTrendData();
