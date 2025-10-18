@@ -446,8 +446,6 @@ export default function AdminDashboard() {
                       data={departmentAttendance}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
                       outerRadius={80}
                       fill="hsl(var(--primary))"
                       dataKey="value"
@@ -456,6 +454,7 @@ export default function AdminDashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
+                    <Legend />
                     <Tooltip formatter={(value: number, name: string, props: any) => [
                       `${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`,
                       'Attendance Rate'
@@ -511,8 +510,6 @@ export default function AdminDashboard() {
                       data={groupAttendance}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
                       outerRadius={80}
                       fill="hsl(var(--primary))"
                       dataKey="value"
@@ -521,6 +518,7 @@ export default function AdminDashboard() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
+                    <Legend />
                     <Tooltip formatter={(value: number, name: string, props: any) => [
                       `${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`,
                       'Attendance Rate'
