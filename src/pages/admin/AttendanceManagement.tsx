@@ -82,8 +82,16 @@ export default function AttendanceManagement() {
   
   // Filter states
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [createdAtStartDate, setCreatedAtStartDate] = useState<Date | undefined>();
-  const [createdAtEndDate, setCreatedAtEndDate] = useState<Date | undefined>();
+  
+  // Get today's date in Malaysia time (UTC+8) for default filter
+  const getTodayMalaysiaTime = () => {
+    const now = new Date();
+    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    return new Date(malaysiaTime.getUTCFullYear(), malaysiaTime.getUTCMonth(), malaysiaTime.getUTCDate());
+  };
+  
+  const [createdAtStartDate, setCreatedAtStartDate] = useState<Date | undefined>(getTodayMalaysiaTime());
+  const [createdAtEndDate, setCreatedAtEndDate] = useState<Date | undefined>(getTodayMalaysiaTime());
   const [checkInStartTime, setCheckInStartTime] = useState('');
   const [checkInEndTime, setCheckInEndTime] = useState('');
   const [checkOutStartTime, setCheckOutStartTime] = useState('');
