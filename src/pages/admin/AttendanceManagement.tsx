@@ -361,10 +361,11 @@ export default function AttendanceManagement() {
       // Prepare update data
       const updateData: any = { status: newStatus };
       
-      // If status is changed to absent, clear both check_in_time and check_out_time
+      // If status is changed to absent, clear check_in_time, check_out_time, and location
       if (newStatus === 'absent') {
         updateData.check_in_time = null;
         updateData.check_out_time = null;
+        updateData.location = null;
       }
       
       // If status is changed to no_checkout, clear check_out_time

@@ -97,6 +97,29 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
     setIsProcessing(true);
 
     try {
+      // Get user's current location
+      let userLocation: { latitude: number; longitude: number } | null = null;
+      
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          });
+        });
+        
+        userLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+      } catch (geoError) {
+        console.error('Error getting location:', geoError);
+        toast.error('Unable to access location. Please enable location services.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Capture image from video
       const canvas = canvasRef.current;
       const video = videoRef.current;
@@ -141,7 +164,8 @@ export function FaceScanDialog({ open, onOpenChange }: FaceScanDialogProps) {
         {
           body: { 
             capturedImageUrl: uploadData.url,
-            userId: userProfile.user_id
+            userId: userProfile.user_id,
+            location: userLocation
           },
         }
       );
