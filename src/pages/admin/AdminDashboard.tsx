@@ -213,6 +213,7 @@ export default function AdminDashboard() {
   };
 
   const fetchGroupAttendance = async () => {
+    // Always show all groups across all departments by default
     let groupsToFetch = groups;
 
     if (selectedDeptForGroup !== 'all') {
