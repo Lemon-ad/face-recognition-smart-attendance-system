@@ -94,15 +94,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sign Out */}
-        <div className="p-4 mt-auto flex flex-col pb-0">
-          <button
-            onClick={signOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-primary hover:bg-primary/5 w-full"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Sign Out</span>
-          </button>
-          <div className="mt-4 flex-1 min-h-24 bg-muted rounded-t-lg" />
+        <div className="mt-auto flex flex-col">
+          <div className="px-4 pt-4">
+            <button
+              onClick={signOut}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-primary hover:bg-primary/5 w-full"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+          <div className="mt-4 flex-1 min-h-24 bg-muted" />
         </div>
       </aside>
 
