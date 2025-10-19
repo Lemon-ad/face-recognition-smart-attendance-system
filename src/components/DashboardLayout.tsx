@@ -102,6 +102,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <LogOut className="h-5 w-5" />
             <span>Sign Out</span>
           </button>
+          <div className="mt-4 h-20 bg-muted rounded-lg" />
         </div>
       </aside>
 
