@@ -94,7 +94,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sign Out */}
-        <div className="p-4 mt-auto mb-24">
+        <div className="p-4 mt-auto flex flex-col pb-0">
           <button
             onClick={signOut}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-primary hover:bg-primary/5 w-full"
@@ -102,7 +102,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <LogOut className="h-5 w-5" />
             <span>Sign Out</span>
           </button>
-          <div className="mt-4 h-20 bg-muted rounded-lg" />
+          <div className="mt-4 flex-1 min-h-24 bg-muted rounded-t-lg" />
         </div>
       </aside>
 
