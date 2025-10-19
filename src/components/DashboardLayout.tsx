@@ -91,8 +91,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <span>{item.label}</span>
             </NavLink>
           ))}
-          
-          {/* Sign Out */}
+        </nav>
+
+        {/* Sign Out - At bottom for desktop, in nav for mobile */}
+        <div className="p-4">
           <button
             onClick={signOut}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-primary hover:bg-primary/5 w-full"
@@ -100,9 +102,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <LogOut className="h-5 w-5" />
             <span>Sign Out</span>
           </button>
-        </nav>
-
-        <div className="p-4" />
+        </div>
       </aside>
 
       {/* Overlay for mobile */}
