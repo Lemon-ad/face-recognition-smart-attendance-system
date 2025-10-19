@@ -17,15 +17,17 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Get today's date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get current date in Kuala Lumpur timezone
+    const now = new Date();
+    const klOffset = 8 * 60;
+    const klNow = new Date(now.getTime() + (klOffset * 60 * 1000));
+    const klToday = new Date(klNow.getFullYear(), klNow.getMonth(), klNow.getDate());
 
-    // Fetch all attendance records from today that don't have check_out_time
+    // Fetch all attendance records that don't have check_out_time
+    // This includes both today's records and older records
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance')
-      .select('attendance_id, user_id, status, check_out_time')
-      .gte('created_at', today.toISOString())
+      .select('attendance_id, user_id, status, check_out_time, created_at')
       .is('check_out_time', null);
 
     if (attendanceError) {
@@ -43,17 +45,31 @@ serve(async (req) => {
       );
     }
 
-    // Current time in Kuala Lumpur (UTC+8)
-    const currentTime = new Date();
-    const klOffset = 8 * 60;
-    const klTime = new Date(currentTime.getTime() + (klOffset * 60 * 1000));
-    const currentHours = klTime.getHours();
-    const currentMinutes = klTime.getMinutes();
+    const currentHours = klNow.getHours();
+    const currentMinutes = klNow.getMinutes();
 
     let updatedCount = 0;
 
     // For each attendance record, check if we should update to no_checkout
     for (const record of attendanceRecords) {
+      // Check if record is from a previous day
+      const recordDate = new Date(record.created_at);
+      const recordKlDate = new Date(recordDate.getTime() + (klOffset * 60 * 1000));
+      const recordKlDay = new Date(recordKlDate.getFullYear(), recordKlDate.getMonth(), recordKlDate.getDate());
+      
+      const isFromPreviousDay = recordKlDay < klToday;
+      
+      // If record is from a previous day and has no checkout, mark as no_checkout
+      if (isFromPreviousDay && record.status !== 'no_checkout') {
+        await supabase
+          .from('attendance')
+          .update({ status: 'no_checkout' })
+          .eq('attendance_id', record.attendance_id);
+
+        updatedCount++;
+        console.log(`Updated attendance ${record.attendance_id} from previous day to no_checkout`);
+        continue;
+      }
       // Get user's group and department info
       const { data: userData } = await supabase
         .from('users')
