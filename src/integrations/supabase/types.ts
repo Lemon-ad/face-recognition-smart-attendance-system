@@ -55,6 +55,42 @@ export type Database = {
           },
         ]
       }
+      attendance_history: {
+        Row: {
+          attendance_date: string
+          attendance_id: string | null
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string | null
+          location: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attendance_date: string
+          attendance_id?: string | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          location?: string | null
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attendance_date?: string
+          attendance_id?: string | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string | null
+          location?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       department: {
         Row: {
           created_at: string | null
@@ -220,7 +256,10 @@ export type Database = {
     Functions: {
       daily_attendance_reset: {
         Args: Record<PropertyKey, never>
-        Returns: undefined
+        Returns: {
+          created: number
+          run_date: string
+        }[]
       }
       mark_daily_absent: {
         Args: Record<PropertyKey, never>
