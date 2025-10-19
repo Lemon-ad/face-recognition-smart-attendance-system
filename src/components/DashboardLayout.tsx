@@ -94,7 +94,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Sign Out - At bottom for desktop, in nav for mobile */}
-        <div className="p-4">
+        <div className="p-4 pb-8">
           <button
             onClick={signOut}
             className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-primary hover:bg-primary/5 w-full"
