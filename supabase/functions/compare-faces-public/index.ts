@@ -251,7 +251,26 @@ serve(async (req) => {
             .single();
 
           if (existingAttendance && existingAttendance.check_in_time) {
-            // User already checked in today - update check_out_time and determine status
+            // User already checked in today - validate location before allowing check-out
+            if (!locationMatches) {
+              return new Response(
+                JSON.stringify({
+                  matched: true,
+                  user: {
+                    user_id: user.user_id,
+                    name: fullName,
+                    username: user.username,
+                  },
+                  action: 'check_out',
+                  status: existingAttendance.status,
+                  message: 'Location mismatch - you are not at the department/group location',
+                  confidence: compareResult.confidence,
+                }),
+                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            // Location matches - proceed with check-out
             // Keep the original check-in status (present/late) unless checking out early
             let checkOutStatus = existingAttendance.status;
             
