@@ -221,15 +221,15 @@ export default function DepartmentsAndGroups() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-6">
+      <div className="p-4 sm:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Departments & Groups</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Departments & Groups</h1>
           <p className="text-muted-foreground mt-2">
             Manage departments and their groups
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 grid-cols-1 gap-6 md:divide-x divide-border">
+        <div className="grid md:grid-cols-2 grid-cols-1 gap-6 md:gap-0 md:divide-x divide-border">
           <div className="md:pr-6">{/* Divider wrapper for departments */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
