@@ -72,17 +72,19 @@ export function ResetUserPasswordDialog({ open, onOpenChange, user }: ResetUserP
     setLoading(true);
 
     try {
-      // Update user password using admin API
-      const { error } = await supabase.auth.admin.updateUserById(
-        user.auth_uuid,
-        { password: newPassword }
+      // Send password reset email to the user
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        user.email,
+        {
+          redirectTo: 'https://vision-smart-attendance.lovable.app/auth',
+        }
       );
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Password updated successfully',
+        description: 'Password reset email sent successfully. User will receive an email to complete the password reset.',
       });
 
       handleClose(false);
@@ -90,7 +92,7 @@ export function ResetUserPasswordDialog({ open, onOpenChange, user }: ResetUserP
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to update password',
+        description: error.message || 'Failed to send password reset email',
       });
     } finally {
       setLoading(false);
