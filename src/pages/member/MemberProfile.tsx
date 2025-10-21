@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Mail, Phone, Building2, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { FaceScanDialog } from '@/components/FaceScanDialog';
+import { PublicFaceScanDialog } from '@/components/PublicFaceScanDialog';
 import { useToast } from '@/hooks/use-toast';
 
 type UserProfile = {
@@ -204,7 +204,7 @@ export default function MemberProfile() {
         </Card>
       </div>
 
-      <FaceScanDialog open={showFaceScan} onOpenChange={setShowFaceScan} />
+      <PublicFaceScanDialog open={showFaceScan} onOpenChange={setShowFaceScan} />
     </DashboardLayout>
   );
 }
