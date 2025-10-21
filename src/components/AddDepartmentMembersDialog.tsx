@@ -195,7 +195,7 @@ export function AddDepartmentMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Members to {department?.department_name}</DialogTitle>
           <DialogDescription>
@@ -228,7 +228,7 @@ export function AddDepartmentMembersDialog({
             />
           </div>
 
-          <ScrollArea className="h-[400px] border rounded-lg">
+          <ScrollArea className="h-[300px] sm:h-[400px] border rounded-lg">
             <div className="p-4 space-y-2">
               {filteredUsers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
@@ -271,18 +271,19 @@ export function AddDepartmentMembersDialog({
           </p>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button 
             variant="destructive" 
             onClick={handleRemoveMembers} 
             disabled={loading || selectedUserIds.length === 0}
+            className="w-full sm:w-auto"
           >
             {loading ? 'Removing...' : 'Remove Members'}
           </Button>
-          <Button onClick={handleAddMembers} disabled={loading || selectedUserIds.length === 0}>
+          <Button onClick={handleAddMembers} disabled={loading || selectedUserIds.length === 0} className="w-full sm:w-auto">
             {loading ? 'Adding...' : 'Add Members'}
           </Button>
         </DialogFooter>
