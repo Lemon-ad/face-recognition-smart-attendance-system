@@ -164,14 +164,14 @@ export default function UserManagement() {
   return (
     <DashboardLayout>
       <div className="p-8 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">User Management</h1>
             <p className="text-muted-foreground mt-2">
               Manage system users and their permissions
             </p>
           </div>
-          <Button onClick={handleAddUser}>
+          <Button onClick={handleAddUser} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
