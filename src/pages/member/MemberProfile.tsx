@@ -148,35 +148,35 @@ export default function MemberProfile() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
-                        <div>
+                      <div className="flex items-start gap-3">
+                        <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm text-muted-foreground">Email</p>
-                          <p className="font-medium">{userProfile?.email || 'N/A'}</p>
+                          <p className="font-medium break-words">{userProfile?.email || 'N/A'}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-5 w-5 text-muted-foreground" />
-                        <div>
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm text-muted-foreground">Phone</p>
-                          <p className="font-medium">{userProfile?.phone_number || 'N/A'}</p>
+                          <p className="font-medium break-words">{userProfile?.phone_number || 'N/A'}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                        <div>
+                      <div className="flex items-start gap-3">
+                        <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm text-muted-foreground">Department</p>
-                          <p className="font-medium">{department?.department_name || 'N/A'}</p>
+                          <p className="font-medium break-words">{department?.department_name || 'N/A'}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <Users className="h-5 w-5 text-muted-foreground" />
-                        <div>
+                      <div className="flex items-start gap-3">
+                        <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div className="min-w-0 flex-1">
                           <p className="text-sm text-muted-foreground">Group</p>
-                          <p className="font-medium">{group?.group_name || 'N/A'}</p>
+                          <p className="font-medium break-words">{group?.group_name || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
