@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PublicFaceScanDialog } from '@/components/PublicFaceScanDialog';
+import { ForgotPasswordDialog } from '@/components/ForgotPasswordDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import logo from '@/assets/logo.png';
 
@@ -16,6 +17,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFaceScan, setShowFaceScan] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { signIn, user, userRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -121,12 +123,13 @@ export default function Auth() {
             </div>
 
             <div className="text-right">
-              <a
-                href="#"
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
                 className="text-sm text-primary hover:text-primary-hover transition-colors"
               >
                 Forgot password?
-              </a>
+              </button>
             </div>
 
             <Button
@@ -160,6 +163,7 @@ export default function Auth() {
       </div>
 
       <PublicFaceScanDialog open={showFaceScan} onOpenChange={setShowFaceScan} />
+      <ForgotPasswordDialog open={showForgotPassword} onOpenChange={setShowForgotPassword} />
     </div>
   );
 }
