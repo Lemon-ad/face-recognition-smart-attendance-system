@@ -201,22 +201,22 @@ export function AddGroupMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pb-4">
           <DialogTitle>Add Members to {group?.group_name}</DialogTitle>
           <DialogDescription>
             Select users from the department to add to this group
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden">
           <div className="space-y-2">
             <Label>Filter Members</Label>
             <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover z-50">
                 <SelectItem value="all">All Users</SelectItem>
                 <SelectItem value="in">Already in Group</SelectItem>
                 <SelectItem value="not-in">Not in Group</SelectItem>
@@ -234,8 +234,8 @@ export function AddGroupMembersDialog({
             />
           </div>
 
-          <ScrollArea className="h-[400px] border rounded-lg">
-            <div className="p-4 space-y-2">
+          <ScrollArea className="h-[250px] sm:h-[350px] border-2 rounded-lg">
+            <div className="p-3 space-y-2">
               {filteredUsers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No users found in this department
@@ -272,23 +272,24 @@ export function AddGroupMembersDialog({
             </div>
           </ScrollArea>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground px-1">
             {selectedUserIds.length} user(s) selected
           </p>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancel
           </Button>
           <Button 
             variant="destructive" 
             onClick={handleRemoveMembers} 
             disabled={loading || selectedUserIds.length === 0}
+            className="w-full sm:w-auto"
           >
             {loading ? 'Removing...' : 'Remove Members'}
           </Button>
-          <Button onClick={handleAddMembers} disabled={loading || selectedUserIds.length === 0}>
+          <Button onClick={handleAddMembers} disabled={loading || selectedUserIds.length === 0} className="w-full sm:w-auto">
             {loading ? 'Adding...' : 'Add Members'}
           </Button>
         </DialogFooter>
