@@ -109,10 +109,10 @@ export default function MemberProfile() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Profile</h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             View and manage your account information
           </p>
         </div>
@@ -129,22 +129,22 @@ export default function MemberProfile() {
               </div>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-start gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-start gap-4 sm:gap-6">
                   {/* Profile Photo */}
-                  <Avatar className="h-24 w-24">
+                  <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                     {userProfile?.photo_url ? (
                       <AvatarImage src={userProfile.photo_url} alt="Profile photo" />
                     ) : null}
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xl sm:text-2xl">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
 
                   {/* Profile Info */}
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 w-full space-y-4">
                     <div>
-                      <h3 className="text-2xl font-bold text-foreground">{getFullName()}</h3>
-                      <p className="text-muted-foreground">@{userProfile?.username || 'N/A'}</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground">{getFullName()}</h3>
+                      <p className="text-muted-foreground text-sm sm:text-base">@{userProfile?.username || 'N/A'}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
