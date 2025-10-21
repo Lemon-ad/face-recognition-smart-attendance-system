@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, KeyRound } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { UserDialog } from '@/components/UserDialog';
+import { ResetUserPasswordDialog } from '@/components/ResetUserPasswordDialog';
 
 type User = Tables<'users'>;
 type Department = Tables<'department'>;
@@ -41,6 +42,7 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -123,6 +125,11 @@ export default function UserManagement() {
   const handleDeleteClick = (user: User) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
+  };
+
+  const handleResetPasswordClick = (user: User) => {
+    setSelectedUser(user);
+    setResetPasswordDialogOpen(true);
   };
 
   const confirmDelete = async () => {
@@ -243,6 +250,14 @@ export default function UserManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleResetPasswordClick(user)}
+                          className="text-primary hover:text-primary"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDeleteClick(user)}
                           className="text-destructive hover:text-destructive"
                         >
@@ -264,6 +279,13 @@ export default function UserManagement() {
         onOpenChange={setUserDialogOpen}
         user={selectedUser}
         onSuccess={fetchUsers}
+      />
+
+      {/* Reset Password Dialog */}
+      <ResetUserPasswordDialog
+        open={resetPasswordDialogOpen}
+        onOpenChange={setResetPasswordDialogOpen}
+        user={selectedUser}
       />
 
       {/* Delete Confirmation Dialog */}
