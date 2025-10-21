@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -41,17 +42,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Mobile Menu Toggle */}
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-border flex items-center px-4 z-40">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
-          <h1 className="ml-4 text-lg font-bold text-primary">
-            Smart Attendance
-          </h1>
+        <div className="fixed top-0 left-0 right-0 h-16 bg-card border-b border-border flex items-center justify-between px-4 z-40">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+            <h1 className="ml-4 text-lg font-bold text-primary">
+              Smart Attendance
+            </h1>
+          </div>
+          <ThemeToggle />
         </div>
       )}
 
@@ -59,14 +63,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside className={`
         ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300' : 'w-64'}
         ${isMobile && !mobileMenuOpen ? '-translate-x-full' : 'translate-x-0'}
-        bg-white border-r border-border flex flex-col h-screen
+        bg-card border-r border-border flex flex-col h-screen
       `}>
         {/* Logo */}
         {!isMobile && (
-          <div className="h-16 flex items-center justify-center border-b border-border">
+          <div className="h-16 flex items-center justify-between px-4 border-b border-border">
             <h1 className="text-xl font-bold text-primary">
               Smart Attendance
             </h1>
+            <ThemeToggle />
           </div>
         )}
         {isMobile && <div className="h-16" />}
