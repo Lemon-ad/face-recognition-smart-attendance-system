@@ -167,14 +167,27 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         const userName = compareData.user.name || compareData.user.username;
         const action = compareData.action === 'check_out' ? 'Check-out' : 'Check-in';
         
+        // Check if there's a location mismatch message
+        if (compareData.message && compareData.message.includes('Location mismatch')) {
+          if (compareData.action === 'check_out') {
+            toast.error(`Check-out unsuccessful! Location mismatch - you are not at the department/group location.`, {
+              duration: 5000,
+            });
+          } else {
+            toast.error(`Check-in unsuccessful! Location mismatch - you are not at the department/group location.`, {
+              duration: 5000,
+            });
+          }
+          handleClose();
+          return;
+        }
+        
         let message = `${action} successful! Welcome, ${userName}`;
         if (compareData.action === 'check_in') {
           if (compareData.status === 'present') {
             message += ' - You\'re on time! ✓';
           } else if (compareData.status === 'late') {
             message += ' - Marked as late';
-          } else if (compareData.status === 'absent') {
-            message += ' - Location mismatch. Check-in not recorded.';
           }
         }
         
