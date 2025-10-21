@@ -321,33 +321,35 @@ export default function MemberDashboard() {
               </Select>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-hidden">
             {chartData.length > 0 ? (
-              <ChartContainer
-                config={{
-                  attendance: {
-                    label: 'Attendance',
-                    color: 'hsl(var(--primary))',
-                  },
-                }}
-                className="h-[300px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="attendance" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              <div className="w-full overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+                <ChartContainer
+                  config={{
+                    attendance: {
+                      label: 'Attendance',
+                      color: 'hsl(var(--primary))',
+                    },
+                  }}
+                  className="h-[300px] min-w-[400px]"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="attendance" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={{ fill: 'hsl(var(--primary))' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
             ) : (
               <p className="text-muted-foreground text-center py-8">
                 No attendance data available for this period
