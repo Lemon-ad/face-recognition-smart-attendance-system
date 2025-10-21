@@ -208,10 +208,10 @@ export default function MemberDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="p-8 space-y-8">
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">My Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">My Dashboard</h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             View your attendance statistics and performance
           </p>
         </div>
@@ -239,13 +239,13 @@ export default function MemberDashboard() {
 
         {/* Stats Grid with Period Selector */}
         <div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
             <h2 className="text-lg font-semibold">Attendance Statistics</h2>
             <Select value={attendancePeriod} onValueChange={(v) => setAttendancePeriod(v as Period)}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover z-50">
                 <SelectItem value="week">Week</SelectItem>
                 <SelectItem value="month">Month</SelectItem>
                 <SelectItem value="annual">Annual</SelectItem>
@@ -304,16 +304,16 @@ export default function MemberDashboard() {
         {/* Attendance Trend Chart */}
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
                 Attendance Trend
               </CardTitle>
               <Select value={trendPeriod} onValueChange={(v) => setTrendPeriod(v as Period)}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="week">Week</SelectItem>
                   <SelectItem value="month">Month</SelectItem>
                   <SelectItem value="annual">Annual</SelectItem>
@@ -363,40 +363,44 @@ export default function MemberDashboard() {
           </CardHeader>
           <CardContent>
             {attendanceIssues.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Location</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendanceIssues.map((record) => (
-                    <TableRow key={record.attendance_id}>
-                      <TableCell>
-                        {format(new Date(record.created_at), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
-                      <TableCell>
-                        {record.check_in_time 
-                          ? format(new Date(record.check_in_time), 'HH:mm')
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {record.check_out_time 
-                          ? format(new Date(record.check_out_time), 'HH:mm')
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {record.location || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Date</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                        <TableHead className="whitespace-nowrap">Check In</TableHead>
+                        <TableHead className="whitespace-nowrap">Check Out</TableHead>
+                        <TableHead className="whitespace-nowrap">Location</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendanceIssues.map((record) => (
+                        <TableRow key={record.attendance_id}>
+                          <TableCell className="whitespace-nowrap">
+                            {format(new Date(record.created_at), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(record.status)}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {record.check_in_time 
+                              ? format(new Date(record.check_in_time), 'HH:mm')
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {record.check_out_time 
+                              ? format(new Date(record.check_out_time), 'HH:mm')
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                            {record.location || '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             ) : (
               <p className="text-muted-foreground text-center py-8">
                 No attendance issues found - Great job!
