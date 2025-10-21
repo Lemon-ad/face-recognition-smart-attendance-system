@@ -697,25 +697,25 @@ export default function AttendanceManagement() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Attendance Management</h1>
+      <div className="p-4 sm:p-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Attendance Management</h1>
           <p className="text-muted-foreground mt-2">View and manage attendance records</p>
         </div>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <CardTitle>Attendance Records</CardTitle>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" className="w-full sm:w-auto">
                       <FileDown className="h-4 w-4 mr-2" />
                       Generate Report
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="bg-popover z-50">
                     <DropdownMenuItem onClick={generatePDF}>
                       Download as PDF
                     </DropdownMenuItem>
@@ -727,14 +727,14 @@ export default function AttendanceManagement() {
               </div>
             </div>
             <div className="space-y-4 mt-4">
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <label className="text-sm font-medium mb-2 block">Department</label>
                   <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover z-50">
                       <SelectItem value="all">All Departments</SelectItem>
                       {departments.map((dept) => (
                         <SelectItem key={dept.department_id} value={dept.department_id}>
@@ -750,7 +750,7 @@ export default function AttendanceManagement() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select group" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-popover z-50">
                       <SelectItem value="all">All Groups</SelectItem>
                       {groups.map((group) => (
                         <SelectItem key={group.group_id} value={group.group_id}>
@@ -764,9 +764,9 @@ export default function AttendanceManagement() {
 
               {/* Filters Section */}
               <div className="border-t pt-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2">
                   <h3 className="text-sm font-medium">Filters</h3>
-                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full sm:w-auto">
                     <X className="h-4 w-4 mr-1" />
                     Clear Filters
                   </Button>
@@ -787,7 +787,7 @@ export default function AttendanceManagement() {
                       <SelectTrigger>
                         <SelectValue placeholder="All Statuses" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover z-50">
                         <SelectItem value="all">All Statuses</SelectItem>
                         <SelectItem value="present">Present</SelectItem>
                         <SelectItem value="late">Late</SelectItem>
@@ -802,7 +802,7 @@ export default function AttendanceManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Check-In Time Range</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         type="time"
                         value={checkInStartTime}
@@ -820,7 +820,7 @@ export default function AttendanceManagement() {
 
                   <div>
                     <label className="text-sm font-medium mb-2 block">Check-Out Time Range</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Input
                         type="time"
                         value={checkOutStartTime}
@@ -840,7 +840,7 @@ export default function AttendanceManagement() {
                 <div className="grid grid-cols-1 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Created At Date Range</label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -854,7 +854,7 @@ export default function AttendanceManagement() {
                             {createdAtStartDate ? format(createdAtStartDate, "PPP") : "Start date"}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
                           <Calendar
                             mode="single"
                             selected={createdAtStartDate}
@@ -877,7 +877,7 @@ export default function AttendanceManagement() {
                             {createdAtEndDate ? format(createdAtEndDate, "PPP") : "End date"}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
                           <Calendar
                             mode="single"
                             selected={createdAtEndDate}
