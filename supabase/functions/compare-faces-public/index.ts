@@ -263,13 +263,8 @@ serve(async (req) => {
             // First scan of the day OR check_in_time is missing
             // Only record check-in if location matches
             if (!locationMatches) {
-              // If attendance record exists but no check_in, delete it first
-              if (existingAttendance) {
-                await supabase
-                  .from('attendance')
-                  .delete()
-                  .eq('attendance_id', existingAttendance.attendance_id);
-              }
+              // Keep the attendance record with 'absent' status - do not delete
+              // If no record exists, it will remain as default 'absent' from daily reset
               
               return new Response(
                 JSON.stringify({
