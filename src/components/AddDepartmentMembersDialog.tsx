@@ -195,22 +195,22 @@ export function AddDepartmentMembersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pb-4">
           <DialogTitle>Add Members to {department?.department_name}</DialogTitle>
           <DialogDescription>
             Select users to add to this department
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden">
           <div className="space-y-2">
             <Label>Filter Members</Label>
             <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover z-50">
                 <SelectItem value="all">All Users</SelectItem>
                 <SelectItem value="in">Already in Department</SelectItem>
                 <SelectItem value="not-in">Not in Department</SelectItem>
@@ -228,8 +228,8 @@ export function AddDepartmentMembersDialog({
             />
           </div>
 
-          <ScrollArea className="h-[300px] sm:h-[400px] border rounded-lg">
-            <div className="p-4 space-y-2">
+          <ScrollArea className="h-[250px] sm:h-[350px] border-2 rounded-lg">
+            <div className="p-3 space-y-2">
               {filteredUsers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No users found
@@ -266,12 +266,12 @@ export function AddDepartmentMembersDialog({
             </div>
           </ScrollArea>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground px-1">
             {selectedUserIds.length} user(s) selected
           </p>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancel
           </Button>
