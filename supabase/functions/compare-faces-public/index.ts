@@ -100,10 +100,11 @@ serve(async (req) => {
             .filter(Boolean)
             .join(' ');
 
-           // Get group and department info to determine start_time, end_time, and location
+          // Get group and department info to determine start_time, end_time, and location
           let startTime = null;
           let endTime = null;
           let departmentLocation = null;
+          let locationSource = 'none'; // Track which location is being used
           
           // Get department location, times, and geofence radius
           let geofenceRadius = 500; // Default 500 meters
@@ -120,6 +121,16 @@ serve(async (req) => {
               startTime = deptData.start_time;
               endTime = deptData.end_time;
               geofenceRadius = deptData.geofence_radius || 500;
+              if (departmentLocation) {
+                locationSource = 'department';
+              }
+              console.log('Department data:', { 
+                department_id: user.department_id, 
+                location: departmentLocation,
+                start_time: startTime,
+                end_time: endTime,
+                geofence_radius: geofenceRadius
+              });
             }
           }
           
@@ -131,22 +142,39 @@ serve(async (req) => {
               .eq('group_id', user.group_id)
               .single();
             
-            // Group location takes priority
+            console.log('Group data:', { 
+              group_id: user.group_id, 
+              location: groupData?.group_location,
+              start_time: groupData?.start_time,
+              end_time: groupData?.end_time,
+              geofence_radius: groupData?.geofence_radius
+            });
+            
+            // Group location takes priority ONLY if it exists
             if (groupData?.group_location) {
               departmentLocation = groupData.group_location;
+              locationSource = 'group';
             }
             
-            // Group times take priority
+            // Group times take priority ONLY if they exist
             if (groupData?.start_time) {
               startTime = groupData.start_time;
               endTime = groupData.end_time;
             }
             
-            // Group geofence radius takes priority
+            // Group geofence radius takes priority ONLY if it exists
             if (groupData?.geofence_radius) {
               geofenceRadius = groupData.geofence_radius;
             }
           }
+          
+          console.log('Final location settings:', {
+            locationSource,
+            finalLocation: departmentLocation,
+            finalStartTime: startTime,
+            finalEndTime: endTime,
+            finalGeofenceRadius: geofenceRadius
+          });
 
           // Validate location if department has a location set
           let locationMatches = true;
@@ -169,8 +197,9 @@ serve(async (req) => {
             locationMatches = distance <= geofenceRadius;
             
             console.log('Location validation:', {
+              locationSource,
               userLocation,
-              departmentLocation: { lng: deptLng, lat: deptLat },
+              requiredLocation: { lng: deptLng, lat: deptLat },
               distance: `${distance.toFixed(2)}m`,
               geofenceRadius: `${geofenceRadius}m`,
               matches: locationMatches
