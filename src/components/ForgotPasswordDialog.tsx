@@ -9,10 +9,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail } from 'lucide-react';
 
 interface ForgotPasswordDialogProps {
   open: boolean;
@@ -20,79 +17,79 @@ interface ForgotPasswordDialogProps {
 }
 
 export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialogProps) {
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email || !email.includes('@')) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Email',
-        description: 'Please enter a valid email address',
-      });
-      return;
-    }
-
+  const handleResetPassword = async () => {
     setLoading(true);
 
     try {
-      // First, check if the user exists and is an admin
-      const { data: userData, error: userError } = await supabase
+      // Fetch all admin users from database
+      const { data: adminUsers, error: fetchError } = await supabase
         .from('users')
-        .select('role, email')
-        .eq('email', email)
-        .single();
+        .select('email')
+        .eq('role', 'admin');
 
-      if (userError || !userData) {
-        // Don't reveal if email exists or not for security
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      if (!adminUsers || adminUsers.length === 0) {
         toast({
-          title: 'Check Your Email',
-          description: 'If an admin account exists with this email, you will receive password reset instructions.',
+          variant: 'destructive',
+          title: 'No Admin Users',
+          description: 'No admin accounts found in the system.',
         });
         setLoading(false);
-        onOpenChange(false);
-        setEmail('');
         return;
       }
 
-      // Only send reset email if user is admin
-      if (userData.role !== 'admin') {
-        // Don't reveal the user isn't an admin
+      // Send password reset emails to all admins
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const admin of adminUsers) {
+        if (admin.email) {
+          try {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(admin.email, {
+              redirectTo: `${window.location.origin}/auth?mode=reset`,
+            });
+
+            if (resetError) {
+              console.error(`Failed to send reset email to ${admin.email}:`, resetError);
+              errorCount++;
+            } else {
+              successCount++;
+            }
+          } catch (err) {
+            console.error(`Error sending reset email to ${admin.email}:`, err);
+            errorCount++;
+          }
+        }
+      }
+
+      if (successCount > 0) {
         toast({
-          title: 'Check Your Email',
-          description: 'If an admin account exists with this email, you will receive password reset instructions.',
+          title: 'Password Reset Emails Sent',
+          description: `Successfully sent password reset instructions to ${successCount} admin account${successCount > 1 ? 's' : ''}.`,
         });
-        setLoading(false);
-        onOpenChange(false);
-        setEmail('');
-        return;
       }
 
-      // Send password reset email
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?mode=reset`,
-      });
-
-      if (resetError) {
-        throw resetError;
+      if (errorCount > 0) {
+        toast({
+          variant: 'destructive',
+          title: 'Some Emails Failed',
+          description: `Failed to send reset emails to ${errorCount} admin account${errorCount > 1 ? 's' : ''}.`,
+        });
       }
-
-      toast({
-        title: 'Password Reset Email Sent',
-        description: 'Check your email for instructions to reset your password.',
-      });
 
       onOpenChange(false);
-      setEmail('');
     } catch (error) {
-      console.error('Error sending reset email:', error);
+      console.error('Error sending reset emails:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to send password reset email. Please try again.',
+        description: 'Failed to send password reset emails. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -105,48 +102,36 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
         <DialogHeader>
           <DialogTitle>Reset Admin Password</DialogTitle>
           <DialogDescription>
-            Enter your admin email address and we'll send you instructions to reset your password.
+            This will send password reset instructions to all admin accounts in the system.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleResetPassword}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="reset-email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="reset-email"
-                  type="email"
-                  placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
+        <div className="space-y-4 py-4">
+          <div className="bg-muted p-4 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Password reset emails will be sent to all administrators. Each admin will receive instructions to reset their password.
+            </p>
           </div>
+        </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                onOpenChange(false);
-                setEmail('');
-              }}
-              disabled={loading}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleResetPassword} 
+            disabled={loading} 
+            className="w-full sm:w-auto"
+          >
+            {loading ? 'Sending...' : 'Send Reset Emails'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
