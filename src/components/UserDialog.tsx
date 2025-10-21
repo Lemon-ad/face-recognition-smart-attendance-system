@@ -259,7 +259,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[600px] sm:w-[600px] overflow-y-auto">
+      <SheetContent className="w-full sm:w-[600px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{isEdit ? 'Edit User' : 'Add New User'}</SheetTitle>
           <SheetDescription>
@@ -316,7 +316,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Account Information</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username *</Label>
                 <Input
@@ -363,7 +363,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>
             
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="first_name">First Name *</Label>
                 <Input
@@ -398,7 +398,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone_number">Phone Number</Label>
                 <Input
@@ -423,7 +423,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Employment Information</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="position_name">Position</Label>
                 <Input
@@ -463,16 +463,17 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
             </div>
           </div>
 
-          <SheetFooter>
+          <SheetFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? 'Saving...' : isEdit ? 'Update User' : 'Create User'}
             </Button>
           </SheetFooter>
