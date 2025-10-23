@@ -904,11 +904,11 @@ export default function AttendanceManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created At</TableHead>
+                    <TableHead className="text-center">User</TableHead>
+                    <TableHead className="text-center">Check In</TableHead>
+                    <TableHead className="text-center">Check Out</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -921,26 +921,26 @@ export default function AttendanceManagement() {
                   ) : (
                     filteredData.map((data) => (
                       <TableRow key={data.attendance?.attendance_id || data.user.user_id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium text-center">
                           {getUserName(data.user)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {data.attendance?.check_in_time
                             ? format(new Date(data.attendance.check_in_time), 'MMM dd, yyyy HH:mm')
                             : '-'}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {data.attendance?.check_out_time
                             ? format(new Date(data.attendance.check_out_time), 'MMM dd, yyyy HH:mm')
                             : '-'}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {data.attendance ? (
                             <Select
                               value={data.attendance.status}
                               onValueChange={(value) => handleStatusChange(data.attendance!.attendance_id, value as 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent')}
                             >
-                              <SelectTrigger className="w-[140px]">
+                              <SelectTrigger className="w-[140px] mx-auto">
                                 <Badge className={getStatusBadgeClass(data.attendance.status)}>
                                   {data.attendance.status.replace('_', ' ').toUpperCase()}
                                 </Badge>
@@ -957,7 +957,7 @@ export default function AttendanceManagement() {
                             <Badge className="bg-red-500 hover:bg-red-600 text-white">ABSENT</Badge>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {data.attendance?.created_at
                             ? format(new Date(data.attendance.created_at), 'MMM dd, yyyy HH:mm')
                             : '-'}
