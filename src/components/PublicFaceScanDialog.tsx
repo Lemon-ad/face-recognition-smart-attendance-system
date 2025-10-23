@@ -157,37 +157,54 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       );
 
       if (compareError) {
-        toast.error('Failed to compare faces');
+        // Try to parse the error response body for detailed error message
+        const errorMessage = compareError.message || 'Failed to compare faces';
+        
+        // Check if it's a location mismatch error (403 status with specific message)
+        if (errorMessage.includes('Location mismatch') || errorMessage.includes('not within the allowed area')) {
+          toast.error('Location mismatch! You are not within the allowed check-in area. Please move closer to your department/group location.', {
+            duration: 5000,
+          });
+        } else {
+          toast.error(errorMessage);
+        }
+        
         console.error('Compare error:', compareError);
         setIsProcessing(false);
         return;
       }
 
-      if (compareData.matched) {
-        const userName = compareData.user.name || compareData.user.username;
-        const action = compareData.action === 'check_out' ? 'Check-out' : 'Check-in';
+      if (compareData.match) {
+        const userName = `${compareData.user.first_name} ${compareData.user.last_name}`;
+        const action = compareData.action === 'check-out' ? 'Check-out' : 'Check-in';
         
-        // Check if there's a location mismatch message
-        if (compareData.message && compareData.message.includes('Location mismatch')) {
-          if (compareData.action === 'check_out') {
-            toast.error(`Check-out unsuccessful! Location mismatch - you are not at the department/group location.`, {
-              duration: 5000,
-            });
-          } else {
-            toast.error(`Check-in unsuccessful! Location mismatch - you are not at the department/group location.`, {
-              duration: 5000,
-            });
-          }
+        // Check for location mismatch or already checked in/out
+        if (compareData.error === 'Location mismatch') {
+          toast.error('Location mismatch! You are not within the allowed check-in area. Please move closer to your department/group location.', {
+            duration: 5000,
+          });
+          handleClose();
+          return;
+        }
+        
+        if (compareData.message && compareData.message.includes('Already checked')) {
+          toast.info(compareData.message, {
+            duration: 4000,
+          });
           handleClose();
           return;
         }
         
         let message = `${action} successful! Welcome, ${userName}`;
-        if (compareData.action === 'check_in') {
+        if (compareData.action === 'check-in') {
           if (compareData.status === 'present') {
             message += ' - You\'re on time! ✓';
           } else if (compareData.status === 'late') {
             message += ' - Marked as late';
+          }
+        } else if (compareData.action === 'check-out') {
+          if (compareData.status === 'early_out') {
+            message += ' - Early checkout noted';
           }
         }
         
@@ -196,7 +213,7 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         });
         handleClose();
       } else {
-        toast.error(compareData.message || 'User not found', {
+        toast.error(compareData.error || compareData.message || 'Face not recognized. Please try again.', {
           duration: 5000,
         });
       }
