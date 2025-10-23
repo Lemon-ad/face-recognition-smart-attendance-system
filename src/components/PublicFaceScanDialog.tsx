@@ -156,80 +156,61 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         }
       );
 
-      // Handle both success and error responses
-      const compareData = response.data;
-      const compareError = response.error;
+      console.log('Face scan response:', { data: response.data, error: response.error });
 
-      // If there's an error, try to get the actual error message
-      if (compareError) {
-        console.error('Compare error:', compareError);
-        
-        // For FunctionsHttpError, the actual error details might be in the compareData
-        if (compareData && compareData.error) {
-          toast.error(compareData.message || compareData.error, {
+      // Check if there's data returned (even with error status)
+      if (response.data) {
+        // Check for location mismatch or other errors in the response data
+        if (response.data.error === 'Location mismatch' || response.data.error) {
+          toast.error(response.data.message || response.data.error, {
             duration: 5000,
           });
+          setIsProcessing(false);
+          return;
+        }
+
+        // Check for successful match
+        if (response.data.match) {
+          const userName = `${response.data.user.first_name} ${response.data.user.last_name}`;
+          const action = response.data.action === 'check-out' ? 'Check-out' : 'Check-in';
+          
+          if (response.data.message && response.data.message.includes('Already checked')) {
+            toast.info(response.data.message, {
+              duration: 4000,
+            });
+            handleClose();
+            return;
+          }
+          
+          let message = `${action} successful! Welcome, ${userName}`;
+          if (response.data.action === 'check-in') {
+            if (response.data.status === 'present') {
+              message += ' - You\'re on time! ✓';
+            } else if (response.data.status === 'late') {
+              message += ' - Marked as late';
+            }
+          } else if (response.data.action === 'check-out') {
+            if (response.data.status === 'early_out') {
+              message += ' - Early checkout noted';
+            }
+          }
+          
+          toast.success(message, {
+            duration: 5000,
+          });
+          handleClose();
         } else {
-          toast.error('Failed to scan face. Please try again.', {
+          toast.error(response.data.error || 'Face not recognized. Please try again.', {
             duration: 5000,
           });
+          setIsProcessing(false);
         }
-        
-        setIsProcessing(false);
-        return;
-      }
-
-      // Check if match was found but there was an error (like location mismatch)
-      if (compareData && compareData.error) {
-        toast.error(compareData.message || compareData.error, {
+      } else if (response.error) {
+        console.error('Compare error:', response.error);
+        toast.error('Failed to scan face. Please try again.', {
           duration: 5000,
         });
         setIsProcessing(false);
-        return;
-      }
-
-      if (compareData && compareData.match) {
-        const userName = `${compareData.user.first_name} ${compareData.user.last_name}`;
-        const action = compareData.action === 'check-out' ? 'Check-out' : 'Check-in';
-        
-        // Check for location mismatch or already checked in/out
-        if (compareData.error === 'Location mismatch') {
-          toast.error('Location mismatch! You are not within the allowed check-in area. Please move closer to your department/group location.', {
-            duration: 5000,
-          });
-          handleClose();
-          return;
-        }
-        
-        if (compareData.message && compareData.message.includes('Already checked')) {
-          toast.info(compareData.message, {
-            duration: 4000,
-          });
-          handleClose();
-          return;
-        }
-        
-        let message = `${action} successful! Welcome, ${userName}`;
-        if (compareData.action === 'check-in') {
-          if (compareData.status === 'present') {
-            message += ' - You\'re on time! ✓';
-          } else if (compareData.status === 'late') {
-            message += ' - Marked as late';
-          }
-        } else if (compareData.action === 'check-out') {
-          if (compareData.status === 'early_out') {
-            message += ' - Early checkout noted';
-          }
-        }
-        
-        toast.success(message, {
-          duration: 5000,
-        });
-        handleClose();
-      } else {
-        toast.error(compareData.error || compareData.message || 'Face not recognized. Please try again.', {
-          duration: 5000,
-        });
       }
 
     } catch (error) {
