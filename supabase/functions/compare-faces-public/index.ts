@@ -260,7 +260,7 @@ serve(async (req) => {
         let action = "";
 
         if (!existingAttendance) {
-          // Check-in logic
+          // Check-in logic: No attendance record for today
           if (startTime && currentTime > startTime) {
             status = "late";
           }
@@ -279,10 +279,31 @@ serve(async (req) => {
 
           action = "check-in";
           console.log(`Check-in successful for user ${user.user_id} with status ${status}`);
-        } else if (!existingAttendance.check_out_time) {
-          // Check-out logic
+        } else if (!existingAttendance.check_in_time) {
+          // Should not happen, but handle case where check_in_time is null
+          return new Response(
+            JSON.stringify({
+              match: true,
+              user: {
+                user_id: user.user_id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+              },
+              confidence,
+              error: "Invalid attendance record",
+              message: "Please contact administrator - attendance record exists without check-in time",
+            }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        } else {
+          // Check-out logic: Already checked in, so update check-out (can be done multiple times)
           if (endTime && currentTime < endTime) {
             status = "early_out";
+          } else {
+            status = "present"; // Normal check-out
           }
 
           const { error: updateError } = await supabase
@@ -299,23 +320,8 @@ serve(async (req) => {
           }
 
           action = "check-out";
-          console.log(`Check-out successful for user ${user.user_id} with status ${status}`);
-        } else {
-          return new Response(
-            JSON.stringify({
-              match: true,
-              user: {
-                user_id: user.user_id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-              },
-              confidence,
-              message: "Already checked in and out today",
-            }),
-            {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
+          const isUpdate = existingAttendance.check_out_time ? " (updated)" : "";
+          console.log(`Check-out successful${isUpdate} for user ${user.user_id} with status ${status}`);
         }
 
         return new Response(
