@@ -57,9 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserRole = async (authUuid: string) => {
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('user_roles')
         .select('role')
-        .eq('auth_uuid', authUuid)
+        .eq('user_id', authUuid)
         .maybeSingle();
 
       if (error) throw error;
