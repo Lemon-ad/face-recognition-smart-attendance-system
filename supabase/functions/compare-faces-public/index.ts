@@ -214,10 +214,10 @@ serve(async (req) => {
 
           if (distance > radius) {
             console.log(`Location validation FAILED: distance ${distance}m > radius ${radius}m`);
-            const actionAttempt = existingAttendance && !existingAttendance.check_out_time ? 'check-out' : 'check-in';
+            const actionAttempt = existingAttendance && existingAttendance.check_in_time ? 'check-out' : 'check-in';
             const msg = actionAttempt === 'check-out'
-              ? 'Check-out unsuccessful! Location mismatch - you are not at the department/group location.'
-              : 'Check-in unsuccessful! Location mismatch - you are not at the department/group location.';
+              ? `Check-out is unsuccessful due to location mismatch. Pls try again, ${user.first_name} ${user.last_name}`
+              : `Check-in is unsuccessful due to location mismatch. Pls try again, ${user.first_name} ${user.last_name}`;
 
             return new Response(
               JSON.stringify({
