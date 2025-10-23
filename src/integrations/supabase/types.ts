@@ -55,42 +55,6 @@ export type Database = {
           },
         ]
       }
-      attendance_history: {
-        Row: {
-          attendance_date: string
-          attendance_id: string | null
-          check_in_time: string | null
-          check_out_time: string | null
-          created_at: string | null
-          location: string | null
-          status: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          attendance_date: string
-          attendance_id?: string | null
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string | null
-          location?: string | null
-          status: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          attendance_date?: string
-          attendance_id?: string | null
-          check_in_time?: string | null
-          check_out_time?: string | null
-          created_at?: string | null
-          location?: string | null
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       department: {
         Row: {
           created_at: string | null
