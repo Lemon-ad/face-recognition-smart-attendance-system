@@ -312,20 +312,20 @@ export default function AttendanceManagement() {
     setFilteredData(filtered);
   }, [attendanceData, userSearchQuery, createdAtStartDate, createdAtEndDate, checkInStartTime, checkInEndTime, checkOutStartTime, checkOutEndTime, statusFilter]);
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
-        return 'success';
+        return 'bg-green-500 hover:bg-green-600 text-white';
       case 'late':
-        return 'warning';
+        return 'bg-yellow-500 hover:bg-yellow-600 text-white';
       case 'early_out':
-        return 'secondary';
+        return 'bg-orange-500 hover:bg-orange-600 text-white';
       case 'no_checkout':
-        return 'destructive';
+        return 'bg-gray-500 hover:bg-gray-600 text-white';
       case 'absent':
-        return 'destructive';
+        return 'bg-red-500 hover:bg-red-600 text-white';
       default:
-        return 'outline';
+        return '';
     }
   };
 
@@ -941,9 +941,11 @@ export default function AttendanceManagement() {
                               onValueChange={(value) => handleStatusChange(data.attendance!.attendance_id, value as 'present' | 'late' | 'early_out' | 'no_checkout' | 'absent')}
                             >
                               <SelectTrigger className="w-[140px]">
-                                <SelectValue />
+                                <Badge className={getStatusBadgeClass(data.attendance.status)}>
+                                  {data.attendance.status.replace('_', ' ').toUpperCase()}
+                                </Badge>
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-popover z-50">
                                 <SelectItem value="present">Present</SelectItem>
                                 <SelectItem value="late">Late</SelectItem>
                                 <SelectItem value="early_out">Early Out</SelectItem>
@@ -952,7 +954,7 @@ export default function AttendanceManagement() {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <Badge variant="destructive">Absent</Badge>
+                            <Badge className="bg-red-500 hover:bg-red-600 text-white">ABSENT</Badge>
                           )}
                         </TableCell>
                         <TableCell>
