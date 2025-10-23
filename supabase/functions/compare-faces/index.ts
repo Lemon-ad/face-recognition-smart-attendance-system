@@ -1,251 +1,295 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function to calculate distance between two coordinates using Haversine formula
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lon2 - lon1) * Math.PI / 180;
+// Input validation schema
+const CompareFaceSchema = z.object({
+  capturedImageUrl: z.string().url().max(2048),
+  userId: z.string().uuid(),
+  location: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }).optional(),
+});
 
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+// Haversine formula to calculate distance between two coordinates
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return R * c; // Distance in meters
+  return R * c;
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { capturedImageUrl, userId, location } = await req.json();
+    // Get auth user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (!capturedImageUrl) {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      throw new Error("Missing Supabase configuration");
+    }
+
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Parse and validate request body
+    const requestBody = await req.json();
+    const validationResult = CompareFaceSchema.safeParse(requestBody);
+
+    if (!validationResult.success) {
+      console.error("Validation error:", validationResult.error);
       return new Response(
-        JSON.stringify({ error: 'No image URL provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    if (!userId) {
+    const { capturedImageUrl, userId, location } = validationResult.data;
+
+    // Validate image URL is from trusted domain
+    const allowedDomains = ["i.ibb.co", "ibb.co"];
+    const imageUrl = new URL(capturedImageUrl);
+    if (!allowedDomains.includes(imageUrl.hostname)) {
       return new Response(
-        JSON.stringify({ error: 'No user ID provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Image URL from untrusted domain" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    if (!location) {
-      return new Response(
-        JSON.stringify({ error: 'Location not provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const FACEPP_API_KEY = Deno.env.get('FACEPP_API_KEY');
-    const FACEPP_API_SECRET = Deno.env.get('FACEPP_API_SECRET');
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!FACEPP_API_KEY || !FACEPP_API_SECRET) {
-      return new Response(
-        JSON.stringify({ error: 'Face++ API credentials not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-
-    // Fetch the specific user's photo and location info
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('user_id, first_name, middle_name, last_name, photo_url, group_id, department_id')
-      .eq('user_id', userId)
+    // Check authorization: user can only check their own attendance unless admin
+    const { data: userData, error: userCheckError } = await supabaseClient
+      .from("users")
+      .select("user_id, role, auth_uuid")
+      .eq("user_id", userId)
       .single();
 
-    if (userError) {
-      console.error('Error fetching user:', userError);
+    if (userCheckError || !userData) {
+      console.error("User lookup error:", userCheckError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch user from database' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!user || !user.photo_url) {
-      return new Response(
-        JSON.stringify({ 
-          matched: false, 
-          message: 'User does not have a registered photo. Please check with admin.' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Compare captured face with user's registered photo
-    try {
-      const formData = new FormData();
-      formData.append('api_key', FACEPP_API_KEY);
-      formData.append('api_secret', FACEPP_API_SECRET);
-      formData.append('image_url1', capturedImageUrl);
-      formData.append('image_url2', user.photo_url);
-
-      const compareResponse = await fetch(
-        'https://api-us.faceplusplus.com/facepp/v3/compare',
+        JSON.stringify({ error: "User not found" }),
         {
-          method: 'POST',
-          body: formData,
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
 
-      const compareResult = await compareResponse.json();
+    // Verify authorization: user must be checking their own attendance or be an admin
+    const { data: hasAdminRole } = await supabaseClient
+      .rpc("has_role", { _user_id: user.id, _role: "admin" });
 
-      console.log(`Comparing with user ${user.first_name} ${user.last_name}:`, compareResult);
+    if (userData.auth_uuid !== user.id && !hasAdminRole) {
+      console.error("Authorization failed: User trying to check attendance for another user");
+      return new Response(
+        JSON.stringify({ error: "Forbidden: You can only check your own attendance" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
-      // Check for Face++ API errors
-      if (compareResult.error_message) {
-        console.error('Face++ API error:', compareResult.error_message);
-        return new Response(
-          JSON.stringify({ 
-            matched: false, 
-            message: 'Face recognition service error. Please try again.' 
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    // Get Face++ API credentials
+    const FACEPP_API_KEY = Deno.env.get("FACEPP_API_KEY");
+    const FACEPP_API_SECRET = Deno.env.get("FACEPP_API_SECRET");
+
+    if (!FACEPP_API_KEY || !FACEPP_API_SECRET) {
+      throw new Error("Face++ API credentials not configured");
+    }
+
+    // Use service role for database operations
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Get user data with photo
+    const { data: userWithPhoto, error: photoError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (photoError || !userWithPhoto) {
+      console.error("Error fetching user:", photoError);
+      return new Response(
+        JSON.stringify({ error: "User not found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!userWithPhoto.photo_url) {
+      return new Response(
+        JSON.stringify({ error: "No photo registered for this user" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Compare faces using Face++ API
+    const formData = new FormData();
+    formData.append("api_key", FACEPP_API_KEY);
+    formData.append("api_secret", FACEPP_API_SECRET);
+    formData.append("image_url1", capturedImageUrl);
+    formData.append("image_url2", userWithPhoto.photo_url);
+
+    const faceppResponse = await fetch(
+      "https://api-us.faceplusplus.com/facepp/v3/compare",
+      {
+        method: "POST",
+        body: formData,
       }
+    );
 
-      // Check if faces match (confidence > 70)
-      if (compareResult.confidence && compareResult.confidence > 70) {
-        const fullName = [user.first_name, user.middle_name, user.last_name]
-          .filter(Boolean)
-          .join(' ');
+    const faceppData = await faceppResponse.json();
+    console.log("Face++ API response:", faceppData);
 
-        // Check for existing attendance today
-        const today = new Date();
-        const malaysiaTime = new Date(today.getTime() + 8 * 60 * 60 * 1000);
-        const todayStart = new Date(Date.UTC(
-          malaysiaTime.getUTCFullYear(),
-          malaysiaTime.getUTCMonth(),
-          malaysiaTime.getUTCDate(),
-          0, 0, 0, 0
-        ));
+    if (faceppData.error_message) {
+      console.error("Face++ API error:", faceppData.error_message);
+      return new Response(
+        JSON.stringify({ error: faceppData.error_message }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
-        const { data: attendanceToday, error: attendanceError } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('user_id', user.user_id)
-          .gte('created_at', todayStart.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
+    const confidence = faceppData.confidence || 0;
+
+    if (confidence > 70) {
+      // Check existing attendance for today
+      const today = new Date().toISOString().split("T")[0];
+      const { data: existingAttendance } = await supabase
+        .from("attendance")
+        .select("*")
+        .eq("user_id", userId)
+        .gte("created_at", `${today}T00:00:00`)
+        .lte("created_at", `${today}T23:59:59`)
+        .maybeSingle();
+
+      // If check-out and location provided, validate location
+      if (existingAttendance && !existingAttendance.check_out_time && location) {
+        const { data: groupData } = await supabase
+          .from("group")
+          .select("group_location, geofence_radius")
+          .eq("group_id", userWithPhoto.group_id)
           .single();
 
-        const isCheckOut = attendanceToday && attendanceToday.check_in_time && !attendanceToday.check_out_time;
+        const { data: deptData } = await supabase
+          .from("department")
+          .select("department_location, geofence_radius")
+          .eq("department_id", userWithPhoto.department_id)
+          .single();
 
-        // If this is a check-out, validate location
-        if (isCheckOut) {
-          // Get group location first (priority), then department location
-          let targetLocation = null;
-          let geofenceRadius = 500; // default
+        const targetLocation = groupData?.group_location || deptData?.department_location;
+        const radius = groupData?.geofence_radius || deptData?.geofence_radius || 500;
 
-          if (user.group_id) {
-            const { data: groupData } = await supabase
-              .from('group')
-              .select('group_location, geofence_radius')
-              .eq('group_id', user.group_id)
-              .single();
+        if (targetLocation) {
+          const [targetLat, targetLon] = targetLocation.split(",").map(Number);
+          const distance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            targetLat,
+            targetLon
+          );
 
-            if (groupData?.group_location) {
-              targetLocation = groupData.group_location;
-              if (groupData.geofence_radius) {
-                geofenceRadius = groupData.geofence_radius;
+          if (distance > radius) {
+            return new Response(
+              JSON.stringify({
+                match: true,
+                confidence,
+                error: "Location mismatch: You are not within the allowed area for check-out",
+                distance,
+                allowedRadius: radius,
+              }),
+              {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
               }
-            }
-          }
-
-          // If no group location, use department location
-          if (!targetLocation && user.department_id) {
-            const { data: deptData } = await supabase
-              .from('department')
-              .select('department_location, geofence_radius')
-              .eq('department_id', user.department_id)
-              .single();
-
-            if (deptData?.department_location) {
-              targetLocation = deptData.department_location;
-              if (deptData.geofence_radius) {
-                geofenceRadius = deptData.geofence_radius;
-              }
-            }
-          }
-
-          // Validate location if target location exists
-          if (targetLocation) {
-            const [targetLat, targetLng] = targetLocation.split(',').map(Number);
-            const distance = calculateDistance(
-              location.latitude,
-              location.longitude,
-              targetLat,
-              targetLng
             );
-
-            if (distance > geofenceRadius) {
-              return new Response(
-                JSON.stringify({
-                  matched: false,
-                  message: `Checkout not recorded: You must be at your ${user.group_id ? 'group' : 'department'} location to check out. You are ${Math.round(distance)}m away (allowed: ${geofenceRadius}m).`,
-                }),
-                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
           }
         }
-
-        return new Response(
-          JSON.stringify({
-            matched: true,
-            user: {
-              user_id: user.user_id,
-              name: fullName,
-            },
-            confidence: compareResult.confidence,
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       }
 
-      // No match found
       return new Response(
         JSON.stringify({
-          matched: false,
-          message: 'Face does not match. Please check with admin.',
+          match: true,
+          user: userWithPhoto,
+          confidence,
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (error) {
-      console.error('Error comparing faces:', error);
-      return new Response(
-        JSON.stringify({ 
-          matched: false, 
-          message: 'Failed to compare faces. Please try again.' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-  } catch (error) {
-    console.error('Error in compare-faces function:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ match: false, confidence }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Error in compare-faces function:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "An error occurred" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });

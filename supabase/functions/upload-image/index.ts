@@ -5,84 +5,120 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// File size limit: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+// Allowed MIME types
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const formData = await req.formData();
-    const image = formData.get('image');
-
-    if (!image) {
-      return new Response(
-        JSON.stringify({ error: 'No image provided' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
     const IMGBB_API_KEY = Deno.env.get('IMGBB_API_KEY');
+    
     if (!IMGBB_API_KEY) {
-      console.error('IMGBB_API_KEY not configured');
+      throw new Error('ImgBB API key not configured');
+    }
+
+    const formData = await req.formData();
+    const imageFile = formData.get('image');
+
+    if (!imageFile || !(imageFile instanceof File)) {
       return new Response(
-        JSON.stringify({ error: 'Image upload service not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        JSON.stringify({ error: 'No image file provided' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    // Prepare form data for ImgBB
-    const imgbbFormData = new FormData();
-    imgbbFormData.append('image', image);
+    // Validate file size
+    if (imageFile.size > MAX_FILE_SIZE) {
+      console.error(`File too large: ${imageFile.size} bytes`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'File too large',
+          message: `Maximum file size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
+          size: imageFile.size
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
-    // Upload to ImgBB
-    const uploadResponse = await fetch(
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(imageFile.type)) {
+      console.error(`Invalid file type: ${imageFile.type}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid file type',
+          message: 'Only JPEG, PNG, and WebP images are allowed',
+          receivedType: imageFile.type
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log(`Uploading image: ${imageFile.name}, size: ${imageFile.size} bytes, type: ${imageFile.type}`);
+
+    const imageBytes = await imageFile.arrayBuffer();
+    const base64Image = btoa(
+      new Uint8Array(imageBytes).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ''
+      )
+    );
+
+    const uploadFormData = new FormData();
+    uploadFormData.append('image', base64Image);
+
+    const imgbbResponse = await fetch(
       `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
       {
         method: 'POST',
-        body: imgbbFormData,
+        body: uploadFormData,
       }
     );
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('ImgBB upload failed:', errorText);
-      return new Response(
-        JSON.stringify({ error: 'Failed to upload image' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    const imgbbData = await imgbbResponse.json();
+
+    if (!imgbbResponse.ok) {
+      console.error('ImgBB API error:', imgbbData);
+      throw new Error(imgbbData.error?.message || 'Failed to upload image to ImgBB');
     }
 
-    const result = await uploadResponse.json();
-
-    if (!result.success) {
-      console.error('ImgBB returned unsuccessful response:', result);
-      return new Response(
-        JSON.stringify({ error: 'Image upload failed' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    console.log('Image uploaded successfully:', result.data.url);
+    console.log('Image uploaded successfully:', imgbbData.data.url);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        url: result.data.url,
-        display_url: result.data.display_url,
-        delete_url: result.data.delete_url
+        url: imgbbData.data.url,
+        imageData: imgbbData.data 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
-
   } catch (error) {
     console.error('Error in upload-image function:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'An unexpected error occurred',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'An error occurred',
+        details: 'Failed to upload image'
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   }
 });

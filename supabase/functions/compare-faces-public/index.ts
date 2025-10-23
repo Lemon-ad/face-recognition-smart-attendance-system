@@ -1,395 +1,308 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation schema
+const PublicCompareFaceSchema = z.object({
+  capturedImageUrl: z.string().url().max(2048),
+  userLocation: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+});
+
+// Haversine formula to calculate distance
+function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { capturedImageUrl, userLocation } = await req.json();
+    // Parse and validate input
+    const requestBody = await req.json();
+    const validationResult = PublicCompareFaceSchema.safeParse(requestBody);
 
-    if (!capturedImageUrl) {
+    if (!validationResult.success) {
+      console.error("Validation error:", validationResult.error);
       return new Response(
-        JSON.stringify({ error: 'No image URL provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Invalid input", details: validationResult.error.issues }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    if (!userLocation || !userLocation.longitude || !userLocation.latitude) {
+    const { capturedImageUrl, userLocation } = validationResult.data;
+
+    // Validate image URL domain
+    const allowedDomains = ["i.ibb.co", "ibb.co"];
+    const imageUrl = new URL(capturedImageUrl);
+    if (!allowedDomains.includes(imageUrl.hostname)) {
+      console.error("Untrusted image domain:", imageUrl.hostname);
       return new Response(
-        JSON.stringify({ error: 'Location data required for check-in' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Image URL from untrusted domain" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    const FACEPP_API_KEY = Deno.env.get('FACEPP_API_KEY');
-    const FACEPP_API_SECRET = Deno.env.get('FACEPP_API_SECRET');
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Log attempt for audit trail
+    const clientIP = req.headers.get("x-forwarded-for") || "unknown";
+    console.log(`Public face scan attempt from IP: ${clientIP} at ${new Date().toISOString()}`);
 
-    if (!FACEPP_API_KEY || !FACEPP_API_SECRET) {
-      return new Response(
-        JSON.stringify({ error: 'Face++ API credentials not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const FACEPP_API_KEY = Deno.env.get("FACEPP_API_KEY");
+    const FACEPP_API_SECRET = Deno.env.get("FACEPP_API_SECRET");
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!FACEPP_API_KEY || !FACEPP_API_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Missing required environment variables");
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch all users with photo_url along with their group and department info
+    // Get all users with photos
     const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('user_id, first_name, middle_name, last_name, photo_url, username, group_id, department_id')
-      .not('photo_url', 'is', null);
+      .from("users")
+      .select("*")
+      .not("photo_url", "is", null);
 
     if (usersError) {
-      console.error('Error fetching users:', usersError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch users from database' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Error fetching users:", usersError);
+      throw usersError;
     }
 
     if (!users || users.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          matched: false, 
-          message: 'No users with photos found in database' 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "No registered users found" }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Compare captured face with each user's photo
+    // Try to match face with each user
     for (const user of users) {
-      try {
-        const formData = new FormData();
-        formData.append('api_key', FACEPP_API_KEY);
-        formData.append('api_secret', FACEPP_API_SECRET);
-        formData.append('image_url1', capturedImageUrl);
-        formData.append('image_url2', user.photo_url);
+      const formData = new FormData();
+      formData.append("api_key", FACEPP_API_KEY);
+      formData.append("api_secret", FACEPP_API_SECRET);
+      formData.append("image_url1", capturedImageUrl);
+      formData.append("image_url2", user.photo_url);
 
-        const compareResponse = await fetch(
-          'https://api-us.faceplusplus.com/facepp/v3/compare',
-          {
-            method: 'POST',
-            body: formData,
+      const faceppResponse = await fetch(
+        "https://api-us.faceplusplus.com/facepp/v3/compare",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const faceppData = await faceppResponse.json();
+
+      if (faceppData.error_message) {
+        console.error("Face++ API error:", faceppData.error_message);
+        continue;
+      }
+
+      const confidence = faceppData.confidence || 0;
+
+      if (confidence > 70) {
+        console.log(`Match found for user ${user.user_id} with confidence ${confidence} from IP: ${clientIP}`);
+
+        // Get department and group settings
+        const { data: groupData } = await supabase
+          .from("group")
+          .select("group_location, geofence_radius, start_time, end_time")
+          .eq("group_id", user.group_id)
+          .maybeSingle();
+
+        const { data: deptData } = await supabase
+          .from("department")
+          .select("department_location, geofence_radius, start_time, end_time")
+          .eq("department_id", user.department_id)
+          .maybeSingle();
+
+        const targetLocation = groupData?.group_location || deptData?.department_location;
+        const radius = groupData?.geofence_radius || deptData?.geofence_radius || 500;
+        const startTime = groupData?.start_time || deptData?.start_time;
+        const endTime = groupData?.end_time || deptData?.end_time;
+
+        // Validate location
+        if (targetLocation) {
+          const [targetLat, targetLon] = targetLocation.split(",").map(Number);
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            targetLat,
+            targetLon
+          );
+
+          if (distance > radius) {
+            console.log(`Location validation failed for user ${user.user_id}: distance ${distance}m > radius ${radius}m`);
+            return new Response(
+              JSON.stringify({
+                match: true,
+                user: {
+                  user_id: user.user_id,
+                  first_name: user.first_name,
+                  last_name: user.last_name,
+                },
+                confidence,
+                error: "Location mismatch",
+                message: "You are not within the allowed area",
+              }),
+              {
+                status: 403,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              }
+            );
           }
-        );
-
-        const compareResult = await compareResponse.json();
-
-        console.log(`Comparing with user ${user.first_name} ${user.last_name}:`, compareResult);
-
-        // Check for Face++ API errors
-        if (compareResult.error_message) {
-          console.error('Face++ API error:', compareResult.error_message);
-          continue; // Try next user
         }
 
-        // Check if faces match (confidence > 70)
-        if (compareResult.confidence && compareResult.confidence > 70) {
-          const fullName = [user.first_name, user.middle_name, user.last_name]
-            .filter(Boolean)
-            .join(' ');
+        // Check existing attendance
+        const today = new Date().toISOString().split("T")[0];
+        const { data: existingAttendance } = await supabase
+          .from("attendance")
+          .select("*")
+          .eq("user_id", user.user_id)
+          .gte("created_at", `${today}T00:00:00`)
+          .lte("created_at", `${today}T23:59:59`)
+          .maybeSingle();
 
-          // Get group and department info to determine start_time, end_time, and location
-          let startTime = null;
-          let endTime = null;
-          let departmentLocation = null;
-          let locationSource = 'none'; // Track which location is being used
-          
-          // Get department location, times, and geofence radius
-          let geofenceRadius = 500; // Default 500 meters
-          
-          if (user.department_id) {
-            const { data: deptData } = await supabase
-              .from('department')
-              .select('start_time, end_time, department_location, geofence_radius')
-              .eq('department_id', user.department_id)
-              .single();
-            
-            if (deptData) {
-              departmentLocation = deptData.department_location;
-              startTime = deptData.start_time;
-              endTime = deptData.end_time;
-              geofenceRadius = deptData.geofence_radius || 500;
-              if (departmentLocation) {
-                locationSource = 'department';
-              }
-              console.log('Department data:', { 
-                department_id: user.department_id, 
-                location: departmentLocation,
-                start_time: startTime,
-                end_time: endTime,
-                geofence_radius: geofenceRadius
-              });
-            }
+        const currentTime = new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone: "Asia/Kuala_Lumpur",
+        });
+
+        let status = "present";
+        let action = "";
+
+        if (!existingAttendance) {
+          // Check-in logic
+          if (startTime && currentTime > startTime) {
+            status = "late";
           }
-          
-          // Override with group settings (location, times, geofence) if user has a group
-          if (user.group_id) {
-            const { data: groupData } = await supabase
-              .from('group')
-              .select('start_time, end_time, group_location, geofence_radius')
-              .eq('group_id', user.group_id)
-              .single();
-            
-            console.log('Group data:', { 
-              group_id: user.group_id, 
-              location: groupData?.group_location,
-              start_time: groupData?.start_time,
-              end_time: groupData?.end_time,
-              geofence_radius: groupData?.geofence_radius
-            });
-            
-            // Group location takes priority ONLY if it exists
-            if (groupData?.group_location) {
-              departmentLocation = groupData.group_location;
-              locationSource = 'group';
-            }
-            
-            // Group times take priority ONLY if they exist
-            if (groupData?.start_time) {
-              startTime = groupData.start_time;
-              endTime = groupData.end_time;
-            }
-            
-            // Group geofence radius takes priority ONLY if it exists
-            if (groupData?.geofence_radius) {
-              geofenceRadius = groupData.geofence_radius;
-            }
-          }
-          
-          console.log('Final location settings:', {
-            locationSource,
-            finalLocation: departmentLocation,
-            finalStartTime: startTime,
-            finalEndTime: endTime,
-            finalGeofenceRadius: geofenceRadius
+
+          const { error: insertError } = await supabase.from("attendance").insert({
+            user_id: user.user_id,
+            status,
+            check_in_time: new Date().toISOString(),
+            location: `${userLocation.latitude},${userLocation.longitude}`,
           });
 
-          // Validate location if department has a location set
-          let locationMatches = true;
-          if (departmentLocation) {
-            const [deptLng, deptLat] = departmentLocation.split(',').map(Number);
-            
-            // Calculate distance using Haversine formula
-            const toRad = (value: number) => (value * Math.PI) / 180;
-            const R = 6371000; // Earth's radius in meters
-            const dLat = toRad(userLocation.latitude - deptLat);
-            const dLng = toRad(userLocation.longitude - deptLng);
-            const a = 
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(toRad(deptLat)) * Math.cos(toRad(userLocation.latitude)) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
-            
-            // Check if within geofence radius
-            locationMatches = distance <= geofenceRadius;
-            
-            console.log('Location validation:', {
-              locationSource,
-              userLocation,
-              requiredLocation: { lng: deptLng, lat: deptLat },
-              distance: `${distance.toFixed(2)}m`,
-              geofenceRadius: `${geofenceRadius}m`,
-              matches: locationMatches
-            });
+          if (insertError) {
+            console.error("Error inserting attendance:", insertError);
+            throw insertError;
           }
 
-          // Create attendance record using Malaysia/Kuala Lumpur timezone (UTC+8)
-          const checkInTime = new Date();
-          const klOffset = 8 * 60; // Kuala Lumpur is UTC+8
-          const klTime = new Date(checkInTime.getTime() + (klOffset * 60 * 1000));
-          
-          let status = 'absent'; // Default status
-
-          if (startTime) {
-            // Parse start_time (format: HH:MM:SS or HH:MM) - this is in KL time
-            const [hours, minutes] = startTime.split(':').map(Number);
-            
-            // Create a date object for today's start time in KL timezone
-            const startDateTime = new Date(klTime);
-            startDateTime.setHours(hours, minutes, 0, 0);
-
-            console.log('Check-in time (KL):', klTime.toISOString(), 'Local:', klTime.toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
-            console.log('Start time (KL):', startDateTime.toISOString(), 'Local:', startDateTime.toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }));
-            console.log('Start time string:', startTime);
-            console.log('Check-in <= Start?', klTime <= startDateTime);
-
-            // Determine status based on check-in time in KL timezone
-            if (klTime <= startDateTime) {
-              status = 'present';
-            } else {
-              status = 'late';
-            }
-          } else {
-            // If no start_time found, default to present
-            status = 'present';
+          action = "check-in";
+          console.log(`Check-in successful for user ${user.user_id} with status ${status}`);
+        } else if (!existingAttendance.check_out_time) {
+          // Check-out logic
+          if (endTime && currentTime < endTime) {
+            status = "early_out";
           }
 
-          console.log('Final status:', status);
+          const { error: updateError } = await supabase
+            .from("attendance")
+            .update({
+              check_out_time: new Date().toISOString(),
+              status,
+            })
+            .eq("attendance_id", existingAttendance.attendance_id);
 
-          // Check if attendance already exists today
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
-          const { data: existingAttendance } = await supabase
-            .from('attendance')
-            .select('attendance_id, check_in_time, status')
-            .eq('user_id', user.user_id)
-            .gte('created_at', today.toISOString())
-            .single();
-
-          if (existingAttendance && existingAttendance.check_in_time) {
-            // User already checked in today - validate location before allowing check-out
-            if (!locationMatches) {
-              return new Response(
-                JSON.stringify({
-                  matched: true,
-                  user: {
-                    user_id: user.user_id,
-                    name: fullName,
-                    username: user.username,
-                  },
-                  action: 'check_out',
-                  status: existingAttendance.status,
-                  message: 'Location mismatch - you are not at the department/group location',
-                  confidence: compareResult.confidence,
-                }),
-                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
-
-            // Location matches - proceed with check-out
-            // Keep the original check-in status (present/late) unless checking out early
-            let checkOutStatus = existingAttendance.status;
-            
-            if (endTime) {
-              const [hours, minutes] = endTime.split(':').map(Number);
-              const endDateTime = new Date(klTime);
-              endDateTime.setHours(hours, minutes, 0, 0);
-              
-              // Check if checkout is before end time
-              if (klTime < endDateTime) {
-                checkOutStatus = 'early_out';
-              }
-            }
-            
-            await supabase
-              .from('attendance')
-              .update({
-                check_out_time: klTime.toISOString(),
-                status: checkOutStatus,
-              })
-              .eq('attendance_id', existingAttendance.attendance_id);
-
-            return new Response(
-              JSON.stringify({
-                matched: true,
-                user: {
-                  user_id: user.user_id,
-                  name: fullName,
-                  username: user.username,
-                },
-                action: 'check_out',
-                status: checkOutStatus,
-                confidence: compareResult.confidence,
-              }),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          } else {
-            // First scan of the day OR check_in_time is missing
-            // Only record check-in if location matches
-            if (!locationMatches) {
-              // Keep the attendance record with 'absent' status - do not delete
-              // If no record exists, it will remain as default 'absent' from daily reset
-              
-              return new Response(
-                JSON.stringify({
-                  matched: true,
-                  user: {
-                    user_id: user.user_id,
-                    name: fullName,
-                    username: user.username,
-                  },
-                  action: 'check_in',
-                  status: 'absent',
-                  message: 'Location mismatch - you are not at the department location',
-                  confidence: compareResult.confidence,
-                }),
-                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
-
-            // Location matches - create or update attendance record with check_in_time
-            if (existingAttendance) {
-              // Update existing record with check_in_time
-              await supabase
-                .from('attendance')
-                .update({
-                  check_in_time: klTime.toISOString(),
-                  status: status,
-                  location: `${userLocation.longitude},${userLocation.latitude}`
-                })
-                .eq('attendance_id', existingAttendance.attendance_id);
-            } else {
-              // Create new attendance record
-              await supabase
-                .from('attendance')
-                .insert({
-                  user_id: user.user_id,
-                  check_in_time: klTime.toISOString(),
-                  status: status,
-                  location: `${userLocation.longitude},${userLocation.latitude}`
-                });
-            }
-
-            return new Response(
-              JSON.stringify({
-                matched: true,
-                user: {
-                  user_id: user.user_id,
-                  name: fullName,
-                  username: user.username,
-                },
-                action: 'check_in',
-                status: status,
-                confidence: compareResult.confidence,
-              }),
-              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+          if (updateError) {
+            console.error("Error updating attendance:", updateError);
+            throw updateError;
           }
+
+          action = "check-out";
+          console.log(`Check-out successful for user ${user.user_id} with status ${status}`);
+        } else {
+          return new Response(
+            JSON.stringify({
+              match: true,
+              user: {
+                user_id: user.user_id,
+                first_name: user.first_name,
+                last_name: user.last_name,
+              },
+              confidence,
+              message: "Already checked in and out today",
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
         }
-      } catch (error) {
-        console.error(`Error comparing with user ${user.user_id}:`, error);
-        // Continue to next user
+
+        return new Response(
+          JSON.stringify({
+            match: true,
+            user: {
+              user_id: user.user_id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+            },
+            confidence,
+            action,
+            status,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
-    // No match found
+    console.log(`No match found for request from IP: ${clientIP}`);
     return new Response(
-      JSON.stringify({
-        matched: false,
-        message: 'User not found',
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: "User not found", match: false }),
+      {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
-
   } catch (error) {
-    console.error('Error in compare-faces-public function:', error);
+    console.error("Error in compare-faces-public:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error instanceof Error ? error.message : "An error occurred" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
     );
   }
 });

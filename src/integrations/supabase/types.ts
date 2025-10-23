@@ -254,6 +254,7 @@ export type Database = {
         Returns: boolean
       }
       mark_daily_absent: { Args: never; Returns: undefined }
+      username_exists: { Args: { username_input: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "member"
