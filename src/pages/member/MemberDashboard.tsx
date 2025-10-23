@@ -12,7 +12,7 @@ import { format, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
-type Period = 'week' | 'month' | 'annual';
+type Period = 'week' | 'month' | 'annual' | 'decade';
 
 export default function MemberDashboard() {
   const { user } = useAuth();
@@ -160,35 +160,165 @@ export default function MemberDashboard() {
   }, [attendanceRecords]);
 
   const chartData = useMemo(() => {
-    const { start, end } = getPeriodDates(trendPeriod);
-    const periodRecords = attendanceRecords.filter(record => {
-      const recordDate = new Date(record.created_at);
-      return recordDate >= start && recordDate <= end;
-    });
+    if (!attendanceRecords.length) return [];
 
-    const groupedByDate: Record<string, { attended: number, date: Date }> = {};
+    const now = new Date();
+    const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
     
-    periodRecords.forEach(record => {
-      const recordDate = new Date(record.created_at);
-      const dateKey = format(recordDate, 'MMM dd');
-      if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = { attended: 0, date: recordDate };
-      }
-      
-      // Count any record with check_in_time as present
-      if (record.check_in_time !== null) {
-        groupedByDate[dateKey].attended++;
-      }
-    });
+    // Filter records with check_in_time (attended)
+    const attendedRecords = attendanceRecords.filter(record => record.check_in_time !== null);
 
-    return Object.entries(groupedByDate)
-      .map(([dateKey, counts]) => ({
-        date: dateKey,
-        attendance: counts.attended,
-        sortDate: counts.date,
-      }))
-      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
-      .slice(-14);
+    let chartData: any[] = [];
+
+    if (trendPeriod === 'week') {
+      // Week view: Show each day (Sun-Sat) with percentage
+      const startOfWeek = new Date(klTime);
+      startOfWeek.setDate(klTime.getDate() - klTime.getDay()); // Go to Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dailyData: { [key: string]: { count: number, sortDate: Date } } = {};
+
+      // Initialize all days of the week
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(startOfWeek);
+        day.setDate(startOfWeek.getDate() + i);
+        const dayKey = day.toISOString().split('T')[0];
+        dailyData[dayKey] = { count: 0, sortDate: day };
+      }
+
+      // Count attendance for each day
+      attendedRecords.forEach((record) => {
+        const recordDate = record.created_at.split('T')[0];
+        if (dailyData[recordDate]) {
+          dailyData[recordDate].count++;
+        }
+      });
+
+      chartData = Object.entries(dailyData)
+        .map(([dateKey, data]) => {
+          const dayOfWeek = data.sortDate.getDay();
+          // For members, each day they can attend once max (100% if attended, 0% if not)
+          const percentage = data.count > 0 ? 100 : 0;
+          return {
+            date: dayNames[dayOfWeek],
+            attendance: percentage,
+            count: data.count,
+            total: 1,
+            sortDate: data.sortDate
+          };
+        })
+        .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+        .map(({ date, attendance, count, total }) => ({ date, attendance, count, total }));
+
+    } else if (trendPeriod === 'month') {
+      // Month view: Show weekly averages
+      const startOfMonth = new Date(klTime.getFullYear(), klTime.getMonth(), 1);
+      const endOfMonth = new Date(klTime.getFullYear(), klTime.getMonth() + 1, 0);
+
+      const weeklyData: { [key: string]: { count: number, days: number, sortDate: Date } } = {};
+
+      // Group by week number
+      attendedRecords.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        if (recordDate >= startOfMonth && recordDate <= endOfMonth) {
+          const weekStart = new Date(recordDate);
+          weekStart.setDate(recordDate.getDate() - recordDate.getDay());
+          const weekKey = weekStart.toISOString().split('T')[0];
+          
+          if (!weeklyData[weekKey]) {
+            weeklyData[weekKey] = { count: 0, days: 0, sortDate: weekStart };
+          }
+          weeklyData[weekKey].count++;
+        }
+      });
+
+      // Calculate days in each week
+      Object.keys(weeklyData).forEach(weekKey => {
+        const weekStart = new Date(weekKey);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        let daysInWeek = 0;
+        for (let d = new Date(weekStart); d <= weekEnd && d <= endOfMonth; d.setDate(d.getDate() + 1)) {
+          if (d >= startOfMonth) daysInWeek++;
+        }
+        weeklyData[weekKey].days = daysInWeek;
+      });
+
+      chartData = Object.entries(weeklyData)
+        .map(([weekKey, data], index) => {
+          const percentage = data.days > 0 ? (data.count / data.days) * 100 : 0;
+          return {
+            date: `Week ${index + 1}`,
+            attendance: percentage,
+            sortDate: data.sortDate
+          };
+        })
+        .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+        .map(({ date, attendance }) => ({ date, attendance }));
+
+    } else if (trendPeriod === 'annual') {
+      // Annual view: Show monthly averages
+      const currentYear = klTime.getFullYear();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyData: { [key: number]: { count: number, days: number } } = {};
+
+      // Initialize all months
+      for (let i = 0; i < 12; i++) {
+        monthlyData[i] = { count: 0, days: new Date(currentYear, i + 1, 0).getDate() };
+      }
+
+      // Count attendance for each month
+      attendedRecords.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        if (recordDate.getFullYear() === currentYear) {
+          const month = recordDate.getMonth();
+          monthlyData[month].count++;
+        }
+      });
+
+      chartData = Object.entries(monthlyData)
+        .map(([monthIndex, data]) => {
+          const percentage = data.days > 0 ? (data.count / data.days) * 100 : 0;
+          return {
+            date: monthNames[parseInt(monthIndex)],
+            attendance: percentage
+          };
+        });
+
+    } else if (trendPeriod === 'decade') {
+      // Decade view: Show yearly averages for 10 years
+      const currentYear = klTime.getFullYear();
+      const yearlyData: { [key: number]: { count: number, days: number } } = {};
+
+      // Initialize 10 years
+      for (let i = 0; i < 10; i++) {
+        const year = currentYear - 9 + i;
+        const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        yearlyData[year] = { count: 0, days: isLeapYear ? 366 : 365 };
+      }
+
+      // Count attendance for each year
+      attendedRecords.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        const year = recordDate.getFullYear();
+        if (yearlyData[year]) {
+          yearlyData[year].count++;
+        }
+      });
+
+      chartData = Object.entries(yearlyData)
+        .map(([year, data]) => {
+          const percentage = data.days > 0 ? (data.count / data.days) * 100 : 0;
+          return {
+            date: year,
+            attendance: percentage
+          };
+        });
+    }
+
+    return chartData;
   }, [attendanceRecords, trendPeriod]);
 
   const getStatusBadge = (status: string) => {
@@ -317,6 +447,7 @@ export default function MemberDashboard() {
                   <SelectItem value="week">Week</SelectItem>
                   <SelectItem value="month">Month</SelectItem>
                   <SelectItem value="annual">Annual</SelectItem>
+                  <SelectItem value="decade">Decade</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -337,8 +468,19 @@ export default function MemberDashboard() {
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
-                      <YAxis />
-                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <YAxis label={{ value: 'Attendance %', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))'
+                        }}
+                        formatter={(value: number, name: string, props: any) => {
+                          if (trendPeriod === 'week' && props.payload.count !== undefined) {
+                            return [`${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`, 'Attendance'];
+                          }
+                          return [`${value.toFixed(1)}%`, 'Attendance'];
+                        }}
+                      />
                       <Line 
                         type="monotone" 
                         dataKey="attendance" 
