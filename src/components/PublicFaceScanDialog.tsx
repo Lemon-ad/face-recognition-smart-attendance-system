@@ -146,7 +146,7 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       }
 
       // Compare faces using Face++ (public scan - no userId)
-      const { data: compareData, error: compareError } = await supabase.functions.invoke(
+      const response = await supabase.functions.invoke(
         'compare-faces-public',
         {
           body: { 
@@ -156,25 +156,39 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
         }
       );
 
+      // Handle both success and error responses
+      const compareData = response.data;
+      const compareError = response.error;
+
+      // If there's an error, try to get the actual error message
       if (compareError) {
-        // Try to parse the error response body for detailed error message
-        const errorMessage = compareError.message || 'Failed to compare faces';
+        console.error('Compare error:', compareError);
         
-        // Check if it's a location mismatch error (403 status with specific message)
-        if (errorMessage.includes('Location mismatch') || errorMessage.includes('not within the allowed area')) {
-          toast.error('Location mismatch! You are not within the allowed check-in area. Please move closer to your department/group location.', {
+        // For FunctionsHttpError, the actual error details might be in the compareData
+        if (compareData && compareData.error) {
+          toast.error(compareData.message || compareData.error, {
             duration: 5000,
           });
         } else {
-          toast.error(errorMessage);
+          toast.error('Failed to scan face. Please try again.', {
+            duration: 5000,
+          });
         }
         
-        console.error('Compare error:', compareError);
         setIsProcessing(false);
         return;
       }
 
-      if (compareData.match) {
+      // Check if match was found but there was an error (like location mismatch)
+      if (compareData && compareData.error) {
+        toast.error(compareData.message || compareData.error, {
+          duration: 5000,
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (compareData && compareData.match) {
         const userName = `${compareData.user.first_name} ${compareData.user.last_name}`;
         const action = compareData.action === 'check-out' ? 'Check-out' : 'Check-in';
         
