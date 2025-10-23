@@ -74,36 +74,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (username: string, password: string) => {
     try {
-      // Use secure function to check if username exists (without exposing user data)
-      const { data: usernameExists, error: checkError } = await supabase
-        .rpc('username_exists', { username_input: username });
+      // Get email for the username using secure function
+      const { data: email, error: emailError } = await supabase
+        .rpc('get_email_for_login', { username_input: username });
 
-      if (checkError) {
-        console.error('Error checking username:', checkError);
+      if (emailError) {
+        console.error('Error getting email:', emailError);
         return { error: new Error('Authentication failed') };
       }
 
-      if (!usernameExists) {
-        return { error: new Error('Invalid username or password') };
-      }
-
-      // Now we need the email for sign in, but only after confirming username exists
-      // This requires the user to be authenticated or admin, but for login we need a different approach
-      // We'll need to fetch it with admin privileges or store email in a way that's accessible
-      // For now, let's fetch with the existing RLS policies which should allow after username check
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('username', username)
-        .maybeSingle();
-
-      if (userError || !userData?.email) {
+      if (!email) {
         return { error: new Error('Invalid username or password') };
       }
 
       // Try to sign in with email and password
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userData.email,
+        email: email,
         password: password,
       });
 

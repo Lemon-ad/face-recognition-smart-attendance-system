@@ -246,6 +246,7 @@ export type Database = {
           run_date: string
         }[]
       }
+      get_email_for_login: { Args: { username_input: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
