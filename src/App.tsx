@@ -14,6 +14,7 @@ import DepartmentsAndGroups from "./pages/admin/DepartmentsAndGroups";
 import AttendanceManagement from "./pages/admin/AttendanceManagement";
 import MemberDashboard from "./pages/member/MemberDashboard";
 import MemberProfile from "./pages/member/MemberProfile";
+import MemberAttendance from "./pages/member/MemberAttendance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requireRole="member">
                     <MemberProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/member/attendance"
+                element={
+                  <ProtectedRoute requireRole="member">
+                    <MemberAttendance />
                   </ProtectedRoute>
                 }
               />

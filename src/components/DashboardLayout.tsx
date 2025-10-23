@@ -33,6 +33,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const memberNavItems = [
     { to: '/member', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/member/attendance', icon: ClipboardList, label: 'Attendance Record' },
     { to: '/member/profile', icon: User, label: 'My Profile' },
   ];
 
