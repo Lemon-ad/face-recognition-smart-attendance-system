@@ -238,7 +238,8 @@ serve(async (req) => {
         const radius = groupData?.geofence_radius || deptData?.geofence_radius || 500;
 
         if (targetLocation) {
-          const [targetLat, targetLon] = targetLocation.split(",").map(Number);
+          // Database stores as lon,lat (longitude first, latitude second)
+          const [targetLon, targetLat] = targetLocation.split(",").map(Number);
           const distance = calculateDistance(
             location.latitude,
             location.longitude,
