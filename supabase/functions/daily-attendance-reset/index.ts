@@ -17,12 +17,13 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    console.log('Starting daily attendance reset at midnight Malaysia time...');
+    console.log('Starting daily attendance reset at 4pm UTC (midnight Malaysia time)...');
 
-    // Fetch all users
+    // Fetch only member users (exclude admins)
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('user_id');
+      .select('user_id, role')
+      .neq('role', 'admin');
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -33,17 +34,17 @@ serve(async (req) => {
     }
 
     if (!users || users.length === 0) {
-      console.log('No users found to create attendance records');
+      console.log('No member users found to create attendance records');
       return new Response(
         JSON.stringify({ 
-          message: 'No users found',
+          message: 'No member users found',
           created: 0
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Creating attendance records for ${users.length} users`);
+    console.log(`Creating attendance records for ${users.length} member users`);
 
     // Create new attendance records with status "absent"
     const newAttendanceRecords = users.map(user => ({
@@ -69,12 +70,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Successfully created ${newAttendanceRecords.length} new attendance records`);
+    console.log(`Successfully created ${newAttendanceRecords.length} new attendance records for members`);
 
     return new Response(
       JSON.stringify({
-        message: 'Daily attendance reset completed successfully',
+        message: 'Daily attendance reset completed successfully for members only',
         created: newAttendanceRecords.length,
+        timestamp: new Date().toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
