@@ -157,6 +157,16 @@ serve(async (req) => {
         const startTime = groupData?.start_time || deptData?.start_time;
         const endTime = groupData?.end_time || deptData?.end_time;
 
+        // Check existing attendance BEFORE location validation to craft precise error messages
+        const today = new Date().toISOString().split("T")[0];
+        const { data: existingAttendance } = await supabase
+          .from("attendance")
+          .select("*")
+          .eq("user_id", user.user_id)
+          .gte("created_at", `${today}T00:00:00`)
+          .lte("created_at", `${today}T23:59:59`)
+          .maybeSingle();
+
         // Validate location
         if (targetLocation) {
           const [targetLat, targetLon] = targetLocation.split(",").map(Number);
@@ -174,6 +184,11 @@ serve(async (req) => {
 
           if (distance > radius) {
             console.log(`Location validation FAILED: distance ${distance}m > radius ${radius}m`);
+            const actionAttempt = existingAttendance && !existingAttendance.check_out_time ? 'check-out' : 'check-in';
+            const msg = actionAttempt === 'check-out'
+              ? 'Check-out unsuccessful! Location mismatch - you are not at the department/group location.'
+              : 'Check-in unsuccessful! Location mismatch - you are not at the department/group location.';
+
             return new Response(
               JSON.stringify({
                 match: true,
@@ -184,25 +199,16 @@ serve(async (req) => {
                 },
                 confidence,
                 error: "Location mismatch",
-                message: "You are not within the allowed area",
+                message: msg,
+                action: actionAttempt,
               }),
               {
-                status: 403,
+                status: 200,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
               }
             );
           }
         }
-
-        // Check existing attendance
-        const today = new Date().toISOString().split("T")[0];
-        const { data: existingAttendance } = await supabase
-          .from("attendance")
-          .select("*")
-          .eq("user_id", user.user_id)
-          .gte("created_at", `${today}T00:00:00`)
-          .lte("created_at", `${today}T23:59:59`)
-          .maybeSingle();
 
         const currentTime = new Date().toLocaleTimeString("en-GB", {
           hour: "2-digit",
@@ -294,9 +300,9 @@ serve(async (req) => {
 
     console.log(`No match found for request from IP: ${clientIP}`);
     return new Response(
-      JSON.stringify({ error: "User not found", match: false }),
+      JSON.stringify({ error: "User not found", match: false, message: "User not found" }),
       {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );

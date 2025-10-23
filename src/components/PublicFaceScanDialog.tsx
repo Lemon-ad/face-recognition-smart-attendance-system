@@ -180,7 +180,16 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       // Check if there's data returned (even with error status)
       if (response.data) {
         // Check for location mismatch or other errors in the response data
-        if (response.data.error === 'Location mismatch' || response.data.error) {
+        if (response.data.error === 'Location mismatch') {
+          toast.error(response.data.message, {
+            duration: 5000,
+          });
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Check for any other error
+        if (response.data.error && response.data.error !== 'Location mismatch') {
           toast.error(response.data.message || response.data.error, {
             duration: 5000,
           });
