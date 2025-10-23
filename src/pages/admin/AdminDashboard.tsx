@@ -339,11 +339,13 @@ export default function AdminDashboard() {
           return {
             date: dayNames[dayOfWeek],
             attendance: percentage,
+            count: data.count,
+            total: totalUsers,
             sortDate: data.sortDate
           };
         })
         .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
-        .map(({ date, attendance }) => ({ date, attendance }));
+        .map(({ date, attendance, count, total }) => ({ date, attendance, count, total }));
 
     } else if (trendPeriod === 'month') {
       // Month view: Show weekly averages
@@ -743,7 +745,12 @@ export default function AdminDashboard() {
                       backgroundColor: 'hsl(var(--background))',
                       border: '1px solid hsl(var(--border))'
                     }}
-                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Attendance']}
+                    formatter={(value: number, name: string, props: any) => {
+                      if (trendPeriod === 'week' && props.payload.count !== undefined) {
+                        return [`${value.toFixed(1)}% (${props.payload.count}/${props.payload.total})`, 'Attendance'];
+                      }
+                      return [`${value.toFixed(1)}%`, 'Attendance'];
+                    }}
                   />
                   <Line 
                     type="monotone" 
