@@ -230,16 +230,7 @@ serve(async (req) => {
                 confidence,
                 error: "Location mismatch",
                 message: msg,
-                action: actionAttempt,
-                debug: {
-                  yourLocation: { lat: userLocation.latitude, lon: userLocation.longitude },
-                  targetLocation: { lat: targetLat, lon: targetLon },
-                  distanceMeters: Math.round(distance),
-                  allowedRadiusMeters: radius,
-                  usingGroupLocation: !!groupData?.group_location,
-                  groupData: groupData,
-                  deptData: deptData
-                }
+                action: actionAttempt
               }),
               {
                 status: 200,

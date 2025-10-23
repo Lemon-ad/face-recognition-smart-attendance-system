@@ -181,20 +181,8 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
       if (response.data) {
         // Check for location mismatch or other errors in the response data
         if (response.data.error === 'Location mismatch') {
-          const debug = response.data.debug;
-          let debugInfo = '';
-          
-          if (debug) {
-            debugInfo = `\n\nDebug Info:\n` +
-              `Your GPS: ${debug.yourLocation.lat.toFixed(6)}, ${debug.yourLocation.lon.toFixed(6)}\n` +
-              `Target: ${debug.targetLocation.lat.toFixed(6)}, ${debug.targetLocation.lon.toFixed(6)}\n` +
-              `Distance: ${debug.distanceMeters}m (Max allowed: ${debug.allowedRadiusMeters}m)`;
-            
-            console.log('Location validation debug:', response.data.debug);
-          }
-          
-          toast.error(response.data.message + debugInfo, {
-            duration: 10000,
+          toast.error(response.data.message, {
+            duration: 5000,
           });
           setIsProcessing(false);
           return;
