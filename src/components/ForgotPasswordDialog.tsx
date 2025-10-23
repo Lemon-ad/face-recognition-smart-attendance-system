@@ -9,6 +9,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
 interface ForgotPasswordDialogProps {
@@ -17,79 +19,44 @@ interface ForgotPasswordDialogProps {
 }
 
 export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialogProps) {
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleResetPassword = async () => {
+    if (!email || !email.includes('@')) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Email',
+        description: 'Please enter a valid email address.',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Fetch all admin users from database
-      const { data: adminUsers, error: fetchError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('role', 'admin');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-      if (fetchError) {
-        throw fetchError;
+      if (error) {
+        throw error;
       }
 
-      if (!adminUsers || adminUsers.length === 0) {
-        toast({
-          variant: 'destructive',
-          title: 'No Admin Users',
-          description: 'No admin accounts found in the system.',
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Send password reset emails to all admins
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const admin of adminUsers) {
-        if (admin.email) {
-          try {
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(admin.email, {
-              redirectTo: `${window.location.origin}/reset-password`,
-            });
-
-            if (resetError) {
-              console.error(`Failed to send reset email to ${admin.email}:`, resetError);
-              errorCount++;
-            } else {
-              successCount++;
-            }
-          } catch (err) {
-            console.error(`Error sending reset email to ${admin.email}:`, err);
-            errorCount++;
-          }
-        }
-      }
-
-      if (successCount > 0) {
-        toast({
-          title: 'Password Reset Emails Sent',
-          description: `Successfully sent password reset instructions to ${successCount} admin account${successCount > 1 ? 's' : ''}.`,
-        });
-      }
-
-      if (errorCount > 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Some Emails Failed',
-          description: `Failed to send reset emails to ${errorCount} admin account${errorCount > 1 ? 's' : ''}.`,
-        });
-      }
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'If an account exists with this email, you will receive password reset instructions.',
+      });
 
       onOpenChange(false);
+      setEmail('');
     } catch (error) {
-      console.error('Error sending reset emails:', error);
+      console.error('Error sending reset email:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to send password reset emails. Please try again.',
+        description: 'Failed to send password reset email. Please try again.',
       });
     } finally {
       setLoading(false);
@@ -100,17 +67,28 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reset Admin Password</DialogTitle>
+          <DialogTitle>Reset Password</DialogTitle>
           <DialogDescription>
-            This will send password reset instructions to all admin accounts in the system.
+            Enter your email address and we'll send you instructions to reset your password.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              Password reset emails will be sent to all administrators. Each admin will receive instructions to reset their password.
-            </p>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !loading) {
+                  handleResetPassword();
+                }
+              }}
+              disabled={loading}
+            />
           </div>
         </div>
 
