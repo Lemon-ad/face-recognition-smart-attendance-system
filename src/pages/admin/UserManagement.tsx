@@ -136,9 +136,19 @@ export default function UserManagement() {
     if (!selectedUser) return;
 
     try {
+      // Get the current session to pass the auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
       // Call edge function to delete both user record and auth account
       const { data, error } = await supabase.functions.invoke('delete-user', {
         body: { userId: selectedUser.user_id },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
