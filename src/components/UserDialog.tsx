@@ -246,6 +246,14 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
         if (insertError) throw insertError;
 
+        // Create user role entry
+        const { error: roleError } = await supabase.from('user_roles').insert({
+          user_id: authData.user.id,
+          role: 'member',
+        });
+
+        if (roleError) throw roleError;
+
         toast({
           title: 'Success',
           description: 'User created successfully',
