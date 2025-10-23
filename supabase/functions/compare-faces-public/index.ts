@@ -167,8 +167,13 @@ serve(async (req) => {
             targetLon
           );
 
+          console.log(`Location check for user ${user.user_id}:`);
+          console.log(`  User GPS: ${userLocation.latitude}, ${userLocation.longitude}`);
+          console.log(`  Department: ${targetLat}, ${targetLon}`);
+          console.log(`  Distance: ${distance}m, Allowed: ${radius}m`);
+
           if (distance > radius) {
-            console.log(`Location validation failed for user ${user.user_id}: distance ${distance}m > radius ${radius}m`);
+            console.log(`Location validation FAILED: distance ${distance}m > radius ${radius}m`);
             return new Response(
               JSON.stringify({
                 match: true,

@@ -13,14 +13,33 @@ interface PublicFaceScanDialogProps {
 export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialogProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (open) {
       startCamera();
+      // Get current location when dialog opens
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
     } else {
       stopCamera();
+      setCurrentLocation(null);
     }
 
     return () => {
@@ -235,6 +254,17 @@ export function PublicFaceScanDialog({ open, onOpenChange }: PublicFaceScanDialo
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {currentLocation && (
+            <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+              <div className="font-medium text-foreground">Your Current GPS Location:</div>
+              <div className="text-muted-foreground">
+                Lat: {currentLocation.latitude.toFixed(6)}, Lon: {currentLocation.longitude.toFixed(6)}
+              </div>
+              <div className="text-muted-foreground text-[10px]">
+                (This will be compared with your department location)
+              </div>
+            </div>
+          )}
           <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
             <video
               ref={videoRef}
