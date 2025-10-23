@@ -117,22 +117,20 @@ export default function AdminDashboard() {
     return createdAt >= cutoffDate;
   };
 
-  // Compare dates (created_at is already in UTC+8 from database after migration)
+  // Compare dates (created_at is already in KL time from database)
   const isSameDate = (createdAtStr: string) => {
+    // Parse the date string - it's already in KL time format
     const createdAt = new Date(createdAtStr);
     
-    // Get the date portion from created_at (it's already in UTC+8)
-    const recordYear = createdAt.getUTCFullYear();
-    const recordMonth = String(createdAt.getUTCMonth() + 1).padStart(2, '0');
-    const recordDay = String(createdAt.getUTCDate()).padStart(2, '0');
-    const recordDate = `${recordYear}-${recordMonth}-${recordDay}`;
+    // Extract just the date portion from created_at (YYYY-MM-DD)
+    const recordDate = createdAtStr.split('T')[0];
     
-    // Get today's date in Malaysia time
+    // Get today's date in KL time
     const now = new Date();
-    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const todayYear = malaysiaTime.getUTCFullYear();
-    const todayMonth = String(malaysiaTime.getUTCMonth() + 1).padStart(2, '0');
-    const todayDay = String(malaysiaTime.getUTCDate()).padStart(2, '0');
+    const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
+    const todayYear = klTime.getFullYear();
+    const todayMonth = String(klTime.getMonth() + 1).padStart(2, '0');
+    const todayDay = String(klTime.getDate()).padStart(2, '0');
     const todayDate = `${todayYear}-${todayMonth}-${todayDay}`;
     
     console.log(`isSameDate: recordDate=${recordDate}, todayDate=${todayDate}, match=${recordDate === todayDate}`);
