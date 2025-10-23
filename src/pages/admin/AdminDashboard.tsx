@@ -91,11 +91,14 @@ export default function AdminDashboard() {
     fetchAttendanceIssues();
   }, []);
 
-  // Check if record is within date range (created_at is already in UTC+8)
+  // Check if record is within date range (created_at is in KL time)
   const isWithinPeriod = (createdAtStr: string, period: string) => {
+    // Parse the date - it's already in KL time
     const createdAt = new Date(createdAtStr);
+    
+    // Get current KL time
     const now = new Date();
-    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
     
     let daysBack = 1;
     switch (period) {
@@ -113,7 +116,10 @@ export default function AdminDashboard() {
         break;
     }
     
-    const cutoffDate = new Date(malaysiaTime.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    const cutoffDate = new Date(klTime);
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    cutoffDate.setHours(0, 0, 0, 0);
+    
     return createdAt >= cutoffDate;
   };
 
@@ -252,7 +258,7 @@ export default function AdminDashboard() {
 
   const fetchTrendData = async () => {
     const now = new Date();
-    const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
     let daysBack = 7;
     let dateFormat: Intl.DateTimeFormatOptions = {};
 
@@ -292,21 +298,30 @@ export default function AdminDashboard() {
     }
 
     // Filter data for the specified period and group by date
-    const dateGroups: { [key: string]: number } = {};
-    const cutoffDate = new Date(malaysiaTime.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    const dateGroups: { [key: string]: { count: number, sortDate: Date } } = {};
+    const cutoffDate = new Date(klTime);
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    cutoffDate.setHours(0, 0, 0, 0);
     
     data.forEach((record) => {
       const createdAt = new Date(record.created_at);
       if (createdAt >= cutoffDate) {
         const date = createdAt.toLocaleDateString('en-US', dateFormat);
-        dateGroups[date] = (dateGroups[date] || 0) + 1;
+        if (!dateGroups[date]) {
+          dateGroups[date] = { count: 0, sortDate: createdAt };
+        }
+        dateGroups[date].count++;
       }
     });
 
-    const chartData = Object.entries(dateGroups).map(([date, count]) => ({
-      date,
-      attendance: count
-    }));
+    const chartData = Object.entries(dateGroups)
+      .map(([date, data]) => ({
+        date,
+        attendance: data.count,
+        sortDate: data.sortDate
+      }))
+      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime()) // Sort chronologically so today is on the right
+      .map(({ date, attendance }) => ({ date, attendance }));
 
     setTrendData(chartData);
   };
