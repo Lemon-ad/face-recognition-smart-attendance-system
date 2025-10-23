@@ -101,7 +101,17 @@ serve(async (req) => {
       throw usersError;
     }
 
+    console.log(`✓ Database query successful. Found ${users?.length || 0} users with photos`);
+    
+    if (users && users.length > 0) {
+      console.log("User photo URLs:");
+      users.forEach((u, idx) => {
+        console.log(`  ${idx + 1}. ${u.first_name} ${u.last_name}: ${u.photo_url}`);
+      });
+    }
+
     if (!users || users.length === 0) {
+      console.log("✗ No users with photos found in database");
       return new Response(
         JSON.stringify({ error: "No registered users found" }),
         {
@@ -112,13 +122,18 @@ serve(async (req) => {
     }
 
     // Try to match face with each user
+    console.log(`\n=== Starting Face++ comparison for ${users.length} users ===`);
     for (const user of users) {
+      console.log(`\nComparing with user: ${user.first_name} ${user.last_name}`);
+      console.log(`  Photo URL: ${user.photo_url}`);
+      
       const formData = new FormData();
       formData.append("api_key", FACEPP_API_KEY);
       formData.append("api_secret", FACEPP_API_SECRET);
       formData.append("image_url1", capturedImageUrl);
       formData.append("image_url2", user.photo_url);
 
+      console.log(`  Calling Face++ API...`);
       const faceppResponse = await fetch(
         "https://api-us.faceplusplus.com/facepp/v3/compare",
         {
@@ -128,13 +143,15 @@ serve(async (req) => {
       );
 
       const faceppData = await faceppResponse.json();
+      console.log(`  Face++ response:`, JSON.stringify(faceppData, null, 2));
 
       if (faceppData.error_message) {
-        console.error("Face++ API error:", faceppData.error_message);
+        console.error(`✗ Face++ API error for ${user.first_name}: ${faceppData.error_message}`);
         continue;
       }
 
       const confidence = faceppData.confidence || 0;
+      console.log(`  Confidence: ${confidence}%`);
 
       if (confidence > 70) {
         console.log(`Match found for user ${user.user_id} with confidence ${confidence} from IP: ${clientIP}`);
