@@ -153,9 +153,12 @@ serve(async (req) => {
       }
 
       const confidence = faceppData.confidence || 0;
+      const threshold1e3 = faceppData.thresholds?.["1e-3"] || 62.327;
       console.log(`  Confidence: ${confidence}%`);
+      console.log(`  Face++ recommended threshold (1e-3): ${threshold1e3}%`);
+      console.log(`  Match result: ${confidence > threshold1e3 ? "✓ MATCH" : "✗ NO MATCH"}`);
 
-      if (confidence > 70) {
+      if (confidence > threshold1e3) {
         console.log(`Match found for user ${user.user_id} with confidence ${confidence} from IP: ${clientIP}`);
 
         // Get department and group settings
