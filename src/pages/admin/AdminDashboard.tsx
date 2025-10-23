@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const [trendDepartment, setTrendDepartment] = useState<string>('all');
   const [trendGroup, setTrendGroup] = useState<string>('all');
   const [trendPeriod, setTrendPeriod] = useState<string>('week');
+  const [totalUsersForTrend, setTotalUsersForTrend] = useState(0);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [attendanceIssues, setAttendanceIssues] = useState<AttendanceIssue[]>([]);
 
@@ -259,28 +260,35 @@ export default function AdminDashboard() {
   const fetchTrendData = async () => {
     const now = new Date();
     const klTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kuala_Lumpur' }));
-    let daysBack = 7;
-    let dateFormat: Intl.DateTimeFormatOptions = {};
 
-    switch (trendPeriod) {
-      case 'week':
-        daysBack = 7;
-        dateFormat = { month: 'short', day: 'numeric' };
-        break;
-      case 'month':
-        daysBack = 30;
-        dateFormat = { month: 'short', day: 'numeric' };
-        break;
-      case 'annual':
-        daysBack = 365;
-        dateFormat = { year: 'numeric', month: 'short' };
-        break;
+    // Get total users count for percentage calculation
+    let userCountQuery = supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .neq('role', 'admin');
+
+    if (trendDepartment !== 'all') {
+      userCountQuery = userCountQuery.eq('department_id', trendDepartment);
     }
 
+    if (trendGroup !== 'all') {
+      userCountQuery = userCountQuery.eq('group_id', trendGroup);
+    }
+
+    const { count: userCount } = await userCountQuery;
+    const totalUsers = userCount || 0;
+    setTotalUsersForTrend(totalUsers);
+
+    if (totalUsers === 0) {
+      setTrendData([]);
+      return;
+    }
+
+    // Fetch all attendance records with check_in_time
     let query = supabase
       .from('attendance')
-      .select('created_at, status, users!inner(department_id, group_id)')
-      .in('status', ['present', 'late', 'early_out', 'no_checkout']);
+      .select('created_at, check_in_time, users!inner(department_id, group_id)')
+      .not('check_in_time', 'is', null);
 
     if (trendDepartment !== 'all') {
       query = query.eq('users.department_id', trendDepartment);
@@ -297,31 +305,155 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Filter data for the specified period and group by date
-    const dateGroups: { [key: string]: { count: number, sortDate: Date } } = {};
-    const cutoffDate = new Date(klTime);
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-    cutoffDate.setHours(0, 0, 0, 0);
-    
-    data.forEach((record) => {
-      const createdAt = new Date(record.created_at);
-      if (createdAt >= cutoffDate) {
-        const date = createdAt.toLocaleDateString('en-US', dateFormat);
-        if (!dateGroups[date]) {
-          dateGroups[date] = { count: 0, sortDate: createdAt };
-        }
-        dateGroups[date].count++;
-      }
-    });
+    let chartData: any[] = [];
 
-    const chartData = Object.entries(dateGroups)
-      .map(([date, data]) => ({
-        date,
-        attendance: data.count,
-        sortDate: data.sortDate
-      }))
-      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime()) // Sort chronologically so today is on the right
-      .map(({ date, attendance }) => ({ date, attendance }));
+    if (trendPeriod === 'week') {
+      // Week view: Show each day (Sun-Sat) of current week
+      const startOfWeek = new Date(klTime);
+      startOfWeek.setDate(klTime.getDate() - klTime.getDay()); // Go to Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const dailyData: { [key: string]: { count: number, sortDate: Date } } = {};
+
+      // Initialize all days of the week
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(startOfWeek);
+        day.setDate(startOfWeek.getDate() + i);
+        const dayKey = day.toISOString().split('T')[0];
+        dailyData[dayKey] = { count: 0, sortDate: day };
+      }
+
+      // Count attendance for each day
+      data.forEach((record) => {
+        const recordDate = record.created_at.split('T')[0];
+        if (dailyData[recordDate]) {
+          dailyData[recordDate].count++;
+        }
+      });
+
+      chartData = Object.entries(dailyData)
+        .map(([dateKey, data]) => {
+          const dayOfWeek = data.sortDate.getDay();
+          const percentage = totalUsers > 0 ? (data.count / totalUsers) * 100 : 0;
+          return {
+            date: dayNames[dayOfWeek],
+            attendance: percentage,
+            sortDate: data.sortDate
+          };
+        })
+        .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+        .map(({ date, attendance }) => ({ date, attendance }));
+
+    } else if (trendPeriod === 'month') {
+      // Month view: Show weekly averages
+      const startOfMonth = new Date(klTime.getFullYear(), klTime.getMonth(), 1);
+      const endOfMonth = new Date(klTime.getFullYear(), klTime.getMonth() + 1, 0);
+
+      const weeklyData: { [key: string]: { count: number, days: number, sortDate: Date } } = {};
+
+      // Group by week number
+      data.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        if (recordDate >= startOfMonth && recordDate <= endOfMonth) {
+          const weekStart = new Date(recordDate);
+          weekStart.setDate(recordDate.getDate() - recordDate.getDay());
+          const weekKey = weekStart.toISOString().split('T')[0];
+          
+          if (!weeklyData[weekKey]) {
+            weeklyData[weekKey] = { count: 0, days: 0, sortDate: weekStart };
+          }
+          weeklyData[weekKey].count++;
+        }
+      });
+
+      // Calculate days in each week
+      Object.keys(weeklyData).forEach(weekKey => {
+        const weekStart = new Date(weekKey);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        let daysInWeek = 0;
+        for (let d = new Date(weekStart); d <= weekEnd && d <= endOfMonth; d.setDate(d.getDate() + 1)) {
+          if (d >= startOfMonth) daysInWeek++;
+        }
+        weeklyData[weekKey].days = daysInWeek;
+      });
+
+      chartData = Object.entries(weeklyData)
+        .map(([weekKey, data], index) => {
+          const totalDays = data.days * totalUsers;
+          const percentage = totalDays > 0 ? (data.count / totalDays) * 100 : 0;
+          return {
+            date: `Week ${index + 1}`,
+            attendance: percentage,
+            sortDate: data.sortDate
+          };
+        })
+        .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime())
+        .map(({ date, attendance }) => ({ date, attendance }));
+
+    } else if (trendPeriod === 'annual') {
+      // Annual view: Show monthly averages
+      const currentYear = klTime.getFullYear();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyData: { [key: number]: { count: number, days: number } } = {};
+
+      // Initialize all months
+      for (let i = 0; i < 12; i++) {
+        monthlyData[i] = { count: 0, days: new Date(currentYear, i + 1, 0).getDate() };
+      }
+
+      // Count attendance for each month
+      data.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        if (recordDate.getFullYear() === currentYear) {
+          const month = recordDate.getMonth();
+          monthlyData[month].count++;
+        }
+      });
+
+      chartData = Object.entries(monthlyData)
+        .map(([monthIndex, data]) => {
+          const totalDays = data.days * totalUsers;
+          const percentage = totalDays > 0 ? (data.count / totalDays) * 100 : 0;
+          return {
+            date: monthNames[parseInt(monthIndex)],
+            attendance: percentage
+          };
+        });
+
+    } else if (trendPeriod === 'decade') {
+      // Decade view: Show yearly averages for 10 years
+      const currentYear = klTime.getFullYear();
+      const yearlyData: { [key: number]: { count: number, days: number } } = {};
+
+      // Initialize 10 years
+      for (let i = 0; i < 10; i++) {
+        const year = currentYear - 9 + i;
+        const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        yearlyData[year] = { count: 0, days: isLeapYear ? 366 : 365 };
+      }
+
+      // Count attendance for each year
+      data.forEach((record) => {
+        const recordDate = new Date(record.created_at);
+        const year = recordDate.getFullYear();
+        if (yearlyData[year]) {
+          yearlyData[year].count++;
+        }
+      });
+
+      chartData = Object.entries(yearlyData)
+        .map(([year, data]) => {
+          const totalDays = data.days * totalUsers;
+          const percentage = totalDays > 0 ? (data.count / totalDays) * 100 : 0;
+          return {
+            date: year,
+            attendance: percentage
+          };
+        });
+    }
 
     setTrendData(chartData);
   };
@@ -590,6 +722,7 @@ export default function AdminDashboard() {
                     <SelectItem value="week">Week</SelectItem>
                     <SelectItem value="month">Month</SelectItem>
                     <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="decade">Decade</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -601,12 +734,16 @@ export default function AdminDashboard() {
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    label={{ value: 'Attendance %', angle: -90, position: 'insideLeft' }}
+                  />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--background))',
                       border: '1px solid hsl(var(--border))'
                     }}
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Attendance']}
                   />
                   <Line 
                     type="monotone" 
