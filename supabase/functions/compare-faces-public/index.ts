@@ -140,11 +140,15 @@ serve(async (req) => {
         console.log(`Match found for user ${user.user_id} with confidence ${confidence} from IP: ${clientIP}`);
 
         // Get department and group settings
-        const { data: groupData } = await supabase
-          .from("group")
-          .select("group_location, geofence_radius, start_time, end_time")
-          .eq("group_id", user.group_id)
-          .maybeSingle();
+        let groupData = null;
+        if (user.group_id) {
+          const result = await supabase
+            .from("group")
+            .select("group_location, geofence_radius, start_time, end_time")
+            .eq("group_id", user.group_id)
+            .maybeSingle();
+          groupData = result.data;
+        }
 
         const { data: deptData } = await supabase
           .from("department")
