@@ -123,17 +123,19 @@ serve(async (req) => {
 
     // Try to match face with each user
     console.log(`\n=== Starting Face++ comparison for ${users.length} users ===`);
+    console.log(`📸 Captured Image URL (from ImgBB): ${capturedImageUrl}`);
+    
     for (const user of users) {
-      console.log(`\nComparing with user: ${user.first_name} ${user.last_name}`);
-      console.log(`  Photo URL: ${user.photo_url}`);
+      console.log(`\n🔍 Comparing with user: ${user.first_name} ${user.last_name}`);
+      console.log(`  📷 Registered Photo URL (from database): ${user.photo_url}`);
       
       const formData = new FormData();
       formData.append("api_key", FACEPP_API_KEY);
       formData.append("api_secret", FACEPP_API_SECRET);
-      formData.append("image_url1", capturedImageUrl);
-      formData.append("image_url2", user.photo_url);
+      formData.append("image_url1", capturedImageUrl); // ImgBB URL with .jpg
+      formData.append("image_url2", user.photo_url);   // Database photo_url
 
-      console.log(`  Calling Face++ API...`);
+      console.log(`  ⚡ Calling Face++ API with both URLs...`);
       const faceppResponse = await fetch(
         "https://api-us.faceplusplus.com/facepp/v3/compare",
         {
