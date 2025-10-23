@@ -323,7 +323,6 @@ export default function MemberAttendance() {
                     <TableHead>Status</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
-                    <TableHead>Location</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -334,12 +333,11 @@ export default function MemberAttendance() {
                         <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No attendance records found
                       </TableCell>
                     </TableRow>
@@ -363,9 +361,6 @@ export default function MemberAttendance() {
                           {record.check_out_time 
                             ? format(new Date(record.check_out_time), 'HH:mm')
                             : '-'}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {record.location || '-'}
                         </TableCell>
                       </TableRow>
                     ))

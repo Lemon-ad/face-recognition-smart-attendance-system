@@ -516,7 +516,6 @@ export default function MemberDashboard() {
                         <TableHead className="whitespace-nowrap">Status</TableHead>
                         <TableHead className="whitespace-nowrap">Check In</TableHead>
                         <TableHead className="whitespace-nowrap">Check Out</TableHead>
-                        <TableHead className="whitespace-nowrap">Location</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -535,9 +534,6 @@ export default function MemberDashboard() {
                             {record.check_out_time 
                               ? format(new Date(record.check_out_time), 'HH:mm')
                               : '-'}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                            {record.location || '-'}
                           </TableCell>
                         </TableRow>
                       ))}
