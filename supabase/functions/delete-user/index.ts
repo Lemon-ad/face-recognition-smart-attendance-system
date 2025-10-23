@@ -105,7 +105,22 @@ serve(async (req) => {
       );
     }
 
-    // Delete from users table (cascade will handle related records)
+    const authUuid = userData.auth_uuid;
+    console.log("Found user with auth_uuid:", authUuid);
+
+    // Step 1: Delete from user_roles table first (to avoid foreign key constraint issues)
+    const { error: roleDeleteError } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", authUuid);
+
+    if (roleDeleteError) {
+      console.error("Error deleting from user_roles:", roleDeleteError);
+      throw roleDeleteError;
+    }
+    console.log("Deleted from user_roles");
+
+    // Step 2: Delete from users table
     const { error: deleteError } = await supabaseAdmin
       .from("users")
       .delete()
@@ -115,18 +130,20 @@ serve(async (req) => {
       console.error("Error deleting user from users table:", deleteError);
       throw deleteError;
     }
+    console.log("Deleted from users table");
 
-    // Delete from auth.users
+    // Step 3: Delete from auth.users
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
-      userData.auth_uuid
+      authUuid
     );
 
     if (authDeleteError) {
       console.error("Error deleting auth user:", authDeleteError);
       throw authDeleteError;
     }
+    console.log("Deleted from auth.users");
 
-    console.log(`Successfully deleted user ${userId} and auth user ${userData.auth_uuid}`);
+    console.log(`Successfully deleted user ${userId} and auth user ${authUuid}`);
 
     return new Response(
       JSON.stringify({ success: true, message: "User deleted successfully" }),
