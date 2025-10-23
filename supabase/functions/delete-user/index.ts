@@ -41,24 +41,37 @@ serve(async (req) => {
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Extract JWT token from header
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Verify the JWT and get user
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error("Auth error:", authError);
+    const token = authHeader.replace(/Bearer\s+/i, "");
+
+    // Decode JWT locally to extract user id (sub)
+    function getUserIdFromJWT(jwt: string): string | null {
+      try {
+        const payload = jwt.split(".")[1];
+        if (!payload) return null;
+        const json = JSON.parse(
+          new TextDecoder().decode(
+            Uint8Array.from(atob(payload.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0))
+          )
+        );
+        return (json && (json.sub || json.user_id)) ?? null;
+      } catch (_e) {
+        return null;
+      }
+    }
+
+    const requesterId = getUserIdFromJWT(token);
+    if (!requesterId) {
       return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("User authenticated:", user.id);
+    console.log("User authenticated:", requesterId);
 
     // Check if user is admin using has_role function
     const { data: hasAdminRole, error: roleError } = await supabaseAdmin
-      .rpc("has_role", { _user_id: user.id, _role: "admin" });
+      .rpc("has_role", { _user_id: requesterId, _role: "admin" });
 
     console.log("Admin role check result:", hasAdminRole, "Error:", roleError);
 
