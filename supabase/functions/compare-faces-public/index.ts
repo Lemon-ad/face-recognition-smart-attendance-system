@@ -259,45 +259,44 @@ serve(async (req) => {
         let status = "present";
         let action = "";
 
-        if (!existingAttendance) {
-          // Check-in logic: No attendance record for today
+        if (!existingAttendance || !existingAttendance.check_in_time) {
+          // Check-in logic: No attendance record OR no check-in time yet
           if (startTime && currentTime > startTime) {
             status = "late";
           }
 
-          const { error: insertError } = await supabase.from("attendance").insert({
-            user_id: user.user_id,
-            status,
-            check_in_time: new Date().toISOString(),
-            location: `${userLocation.latitude},${userLocation.longitude}`,
-          });
+          if (!existingAttendance) {
+            // Create new attendance record
+            const { error: insertError } = await supabase.from("attendance").insert({
+              user_id: user.user_id,
+              status,
+              check_in_time: new Date().toISOString(),
+              location: `${userLocation.latitude},${userLocation.longitude}`,
+            });
 
-          if (insertError) {
-            console.error("Error inserting attendance:", insertError);
-            throw insertError;
+            if (insertError) {
+              console.error("Error inserting attendance:", insertError);
+              throw insertError;
+            }
+          } else {
+            // Update existing absent record with check-in
+            const { error: updateError } = await supabase
+              .from("attendance")
+              .update({
+                check_in_time: new Date().toISOString(),
+                status,
+                location: `${userLocation.latitude},${userLocation.longitude}`,
+              })
+              .eq("attendance_id", existingAttendance.attendance_id);
+
+            if (updateError) {
+              console.error("Error updating attendance with check-in:", updateError);
+              throw updateError;
+            }
           }
 
           action = "check-in";
           console.log(`Check-in successful for user ${user.user_id} with status ${status}`);
-        } else if (!existingAttendance.check_in_time) {
-          // Should not happen, but handle case where check_in_time is null
-          return new Response(
-            JSON.stringify({
-              match: true,
-              user: {
-                user_id: user.user_id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-              },
-              confidence,
-              error: "Invalid attendance record",
-              message: "Please contact administrator - attendance record exists without check-in time",
-            }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            }
-          );
         } else {
           // Check-out logic: Already checked in, so update check-out (can be done multiple times)
           if (endTime && currentTime < endTime) {
