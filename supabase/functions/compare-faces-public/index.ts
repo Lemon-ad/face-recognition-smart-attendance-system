@@ -148,6 +148,7 @@ serve(async (req) => {
             .eq("group_id", user.group_id)
             .maybeSingle();
           groupData = result.data;
+          console.log("Group data retrieved:", groupData);
         }
 
         const { data: deptData } = await supabase
@@ -155,6 +156,8 @@ serve(async (req) => {
           .select("department_location, geofence_radius, start_time, end_time")
           .eq("department_id", user.department_id)
           .maybeSingle();
+        
+        console.log("Department data retrieved:", deptData);
 
         const targetLocation = groupData?.group_location || deptData?.department_location;
         const radius = groupData?.geofence_radius || deptData?.geofence_radius || 500;
@@ -205,6 +208,15 @@ serve(async (req) => {
                 error: "Location mismatch",
                 message: msg,
                 action: actionAttempt,
+                debug: {
+                  yourLocation: { lat: userLocation.latitude, lon: userLocation.longitude },
+                  targetLocation: { lat: targetLat, lon: targetLon },
+                  distanceMeters: Math.round(distance),
+                  allowedRadiusMeters: radius,
+                  usingGroupLocation: !!groupData?.group_location,
+                  groupData: groupData,
+                  deptData: deptData
+                }
               }),
               {
                 status: 200,
