@@ -156,9 +156,9 @@ export default function AdminDashboard() {
     
     console.log('All attendance records:', allAttendance);
     
-    // Filter by today (using isWithinPeriod for 'day' like department attendance does)
+    // Filter by today (using isSameDate to check if created_at date matches today's date)
     const todayAttendance = allAttendance?.filter(record => 
-      isWithinPeriod(record.created_at, 'day')
+      isSameDate(record.created_at)
     ) || [];
     
     console.log('Today attendance:', todayAttendance);
