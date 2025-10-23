@@ -206,11 +206,11 @@ export default function MemberAttendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-6">
               {/* Date Range Filter */}
               <div className="space-y-2">
                 <Label>Date Range</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -220,11 +220,13 @@ export default function MemberAttendance() {
                           !createdAtStartDate && "text-muted-foreground"
                         )}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {createdAtStartDate ? format(createdAtStartDate, "PPP") : "Start date"}
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {createdAtStartDate ? format(createdAtStartDate, "PPP") : "Start date"}
+                        </span>
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-50" align="start">
                       <Calendar
                         mode="single"
                         selected={createdAtStartDate}
@@ -243,11 +245,13 @@ export default function MemberAttendance() {
                           !createdAtEndDate && "text-muted-foreground"
                         )}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {createdAtEndDate ? format(createdAtEndDate, "PPP") : "End date"}
+                        <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {createdAtEndDate ? format(createdAtEndDate, "PPP") : "End date"}
+                        </span>
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-50" align="start">
                       <Calendar
                         mode="single"
                         selected={createdAtEndDate}
@@ -263,18 +267,20 @@ export default function MemberAttendance() {
               {/* Check-in Time Range */}
               <div className="space-y-2">
                 <Label>Check-in Time Range</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     type="time"
                     value={checkInStartTime}
                     onChange={(e) => setCheckInStartTime(e.target.value)}
                     placeholder="Start"
+                    className="w-full"
                   />
                   <Input
                     type="time"
                     value={checkInEndTime}
                     onChange={(e) => setCheckInEndTime(e.target.value)}
                     placeholder="End"
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -282,18 +288,20 @@ export default function MemberAttendance() {
               {/* Check-out Time Range */}
               <div className="space-y-2">
                 <Label>Check-out Time Range</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     type="time"
                     value={checkOutStartTime}
                     onChange={(e) => setCheckOutStartTime(e.target.value)}
                     placeholder="Start"
+                    className="w-full"
                   />
                   <Input
                     type="time"
                     value={checkOutEndTime}
                     onChange={(e) => setCheckOutEndTime(e.target.value)}
                     placeholder="End"
+                    className="w-full"
                   />
                 </div>
               </div>
