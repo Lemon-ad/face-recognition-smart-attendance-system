@@ -18,38 +18,49 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Delete user function called");
+    
     // Verify JWT authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.error("No authorization header");
+      return new Response(JSON.stringify({ error: "Unauthorized: No auth header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error("Missing Supabase configuration");
     }
 
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Use service role to bypass RLS for admin operations
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Extract JWT token from header
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Verify the JWT and get user
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.error("Auth error:", authError);
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if user is admin
-    const { data: hasAdminRole } = await supabaseClient
+    console.log("User authenticated:", user.id);
+
+    // Check if user is admin using has_role function
+    const { data: hasAdminRole, error: roleError } = await supabaseAdmin
       .rpc("has_role", { _user_id: user.id, _role: "admin" });
+
+    console.log("Admin role check result:", hasAdminRole, "Error:", roleError);
 
     if (!hasAdminRole) {
       return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
@@ -74,10 +85,7 @@ serve(async (req) => {
     }
 
     const { userId } = validationResult.data;
-
-    // Use service role for admin operations
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!);
+    console.log("Attempting to delete user:", userId);
 
     // Get auth_uuid from users table
     const { data: userData, error: userError } = await supabaseAdmin
