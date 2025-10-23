@@ -193,7 +193,8 @@ serve(async (req) => {
 
         // Validate location
         if (targetLocation) {
-          const [targetLat, targetLon] = targetLocation.split(",").map(Number);
+          // Database stores as lon,lat (longitude first, latitude second)
+          const [targetLon, targetLat] = targetLocation.split(",").map(Number);
           const distance = calculateDistance(
             userLocation.latitude,
             userLocation.longitude,
@@ -202,8 +203,8 @@ serve(async (req) => {
           );
 
           console.log(`Location check for user ${user.user_id}:`);
-          console.log(`  User GPS: ${userLocation.latitude}, ${userLocation.longitude}`);
-          console.log(`  Department: ${targetLat}, ${targetLon}`);
+          console.log(`  User GPS: lat=${userLocation.latitude}, lon=${userLocation.longitude}`);
+          console.log(`  Target: lat=${targetLat}, lon=${targetLon}`);
           console.log(`  Distance: ${distance}m, Allowed: ${radius}m`);
 
           if (distance > radius) {
