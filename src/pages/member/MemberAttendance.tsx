@@ -161,37 +161,20 @@ export default function MemberAttendance() {
     setFilteredData(filtered);
   }, [attendanceData, createdAtStartDate, createdAtEndDate, checkInStartTime, checkInEndTime, checkOutStartTime, checkOutEndTime]);
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
-        return 'default';
+        return 'bg-green-500 hover:bg-green-600 text-white';
       case 'late':
-        return 'default';
+        return 'bg-yellow-500 hover:bg-yellow-600 text-white';
       case 'early_out':
-        return 'default';
+        return 'bg-orange-500 hover:bg-orange-600 text-white';
       case 'no_checkout':
-        return 'secondary';
+        return 'bg-gray-500 hover:bg-gray-600 text-white';
       case 'absent':
-        return 'destructive';
+        return 'bg-red-500 hover:bg-red-600 text-white';
       default:
-        return 'outline';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'present':
-        return 'bg-green-500';
-      case 'late':
-        return 'bg-yellow-500';
-      case 'early_out':
-        return 'bg-orange-500';
-      case 'no_checkout':
-        return 'bg-gray-500';
-      case 'absent':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-400';
+        return '';
     }
   };
 
@@ -365,12 +348,9 @@ export default function MemberAttendance() {
                           {record.created_at ? format(new Date(record.created_at), 'PPP') : '-'}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${getStatusColor(record.status)}`} />
-                            <Badge variant={getStatusBadgeVariant(record.status)}>
-                              {record.status.replace('_', ' ').toUpperCase()}
-                            </Badge>
-                          </div>
+                          <Badge className={getStatusBadgeClass(record.status)}>
+                            {record.status.replace('_', ' ').toUpperCase()}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {record.check_in_time 
