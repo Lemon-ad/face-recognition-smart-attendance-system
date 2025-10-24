@@ -209,7 +209,7 @@ serve(async (req) => {
 
     const confidence = faceppData.confidence || 0;
 
-    if (confidence > 70) {
+    if (confidence > 50) {
       // Get today's date in Asia/Kuala_Lumpur timezone
       const todayKL = new Date().toLocaleDateString("en-CA", {
         timeZone: "Asia/Kuala_Lumpur",
