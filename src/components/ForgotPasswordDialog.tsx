@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ForgotPasswordDialogProps {
@@ -20,6 +21,10 @@ interface ForgotPasswordDialogProps {
 
 export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialogProps) {
   const [username, setUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -29,6 +34,33 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
         variant: 'destructive',
         title: 'Username Required',
         description: 'Please enter your username.',
+      });
+      return;
+    }
+
+    if (!newPassword || !confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Required',
+        description: 'Please enter and confirm your new password.',
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        variant: 'destructive',
+        title: 'Passwords Do Not Match',
+        description: 'Please make sure both passwords match.',
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Too Short',
+        description: 'Password must be at least 6 characters long.',
       });
       return;
     }
@@ -66,7 +98,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
       // Send password reset email to the admin
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password?newPassword=${encodeURIComponent(newPassword)}`,
       });
 
       if (error) {
@@ -75,11 +107,13 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
 
       toast({
         title: 'Password Reset Email Sent',
-        description: 'A password reset link has been sent to the admin email address.',
+        description: 'A confirmation link has been sent to the admin email. Click it to complete the password reset.',
       });
 
       onOpenChange(false);
       setUsername('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (error) {
       console.error('Error sending reset email:', error);
       toast({
@@ -111,13 +145,67 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
               placeholder="Enter your admin username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !loading) {
-                  handleResetPassword();
-                }
-              }}
               disabled={loading}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">New Password</Label>
+            <div className="relative">
+              <Input
+                id="newPassword"
+                type={showNewPassword ? 'text' : 'password'}
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                disabled={loading}
+              >
+                {showNewPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !loading) {
+                    handleResetPassword();
+                  }
+                }}
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                disabled={loading}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -136,7 +224,7 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
             disabled={loading} 
             className="w-full sm:w-auto"
           >
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? 'Sending...' : 'Confirm Reset'}
           </Button>
         </DialogFooter>
       </DialogContent>
