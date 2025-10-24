@@ -187,13 +187,16 @@ serve(async (req) => {
         const endTime = groupData?.end_time || deptData?.end_time;
 
         // Check existing attendance BEFORE location validation to craft precise error messages
-        const today = new Date().toISOString().split("T")[0];
+        // Get today's date in Asia/Kuala_Lumpur timezone
+        const todayKL = new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Kuala_Lumpur",
+        });
         const { data: existingAttendance } = await supabase
           .from("attendance")
           .select("*")
           .eq("user_id", user.user_id)
-          .gte("created_at", `${today}T00:00:00`)
-          .lte("created_at", `${today}T23:59:59`)
+          .gte("created_at", `${todayKL}T00:00:00`)
+          .lte("created_at", `${todayKL}T23:59:59`)
           .maybeSingle();
 
         // Validate location
@@ -240,6 +243,13 @@ serve(async (req) => {
           }
         }
 
+        // Get current time in Asia/Kuala_Lumpur timezone
+        const klTime = new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Kuala_Lumpur",
+        });
+        const klDate = new Date(klTime);
+        const klISOString = klDate.toISOString();
+        
         const currentTime = new Date().toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
@@ -257,11 +267,11 @@ serve(async (req) => {
           }
 
           if (!existingAttendance) {
-            // Create new attendance record
+            // Create new attendance record with KL timezone
             const { error: insertError } = await supabase.from("attendance").insert({
               user_id: user.user_id,
               status,
-              check_in_time: new Date().toISOString(),
+              check_in_time: klISOString,
               location: `${userLocation.latitude},${userLocation.longitude}`,
             });
 
@@ -270,11 +280,11 @@ serve(async (req) => {
               throw insertError;
             }
           } else {
-            // Update existing absent record with check-in
+            // Update existing absent record with check-in in KL timezone
             const { error: updateError } = await supabase
               .from("attendance")
               .update({
-                check_in_time: new Date().toISOString(),
+                check_in_time: klISOString,
                 status,
                 location: `${userLocation.latitude},${userLocation.longitude}`,
               })
@@ -299,7 +309,7 @@ serve(async (req) => {
           const { error: updateError } = await supabase
             .from("attendance")
             .update({
-              check_out_time: new Date().toISOString(),
+              check_out_time: klISOString,
               status,
             })
             .eq("attendance_id", existingAttendance.attendance_id);

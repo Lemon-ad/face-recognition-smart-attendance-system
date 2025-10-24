@@ -210,15 +210,33 @@ serve(async (req) => {
     const confidence = faceppData.confidence || 0;
 
     if (confidence > 70) {
+      // Get today's date in Asia/Kuala_Lumpur timezone
+      const todayKL = new Date().toLocaleDateString("en-CA", {
+        timeZone: "Asia/Kuala_Lumpur",
+      });
+      
       // Check existing attendance for today
-      const today = new Date().toISOString().split("T")[0];
       const { data: existingAttendance } = await supabase
         .from("attendance")
         .select("*")
         .eq("user_id", userId)
-        .gte("created_at", `${today}T00:00:00`)
-        .lte("created_at", `${today}T23:59:59`)
+        .gte("created_at", `${todayKL}T00:00:00`)
+        .lte("created_at", `${todayKL}T23:59:59`)
         .maybeSingle();
+
+      // Get current time in Asia/Kuala_Lumpur timezone
+      const klTime = new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Kuala_Lumpur",
+      });
+      const klDate = new Date(klTime);
+      const klISOString = klDate.toISOString();
+      
+      const currentTime = new Date().toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Asia/Kuala_Lumpur",
+      });
 
       // If check-out and location provided, validate location
       if (existingAttendance && !existingAttendance.check_out_time && location) {
@@ -265,11 +283,96 @@ serve(async (req) => {
         }
       }
 
+      // Get department and group settings for time validation
+      const { data: groupData } = await supabase
+        .from("group")
+        .select("start_time, end_time")
+        .eq("group_id", userWithPhoto.group_id)
+        .maybeSingle();
+
+      const { data: deptData } = await supabase
+        .from("department")
+        .select("start_time, end_time")
+        .eq("department_id", userWithPhoto.department_id)
+        .maybeSingle();
+
+      const startTime = groupData?.start_time || deptData?.start_time;
+      const endTime = groupData?.end_time || deptData?.end_time;
+
+      let status = "present";
+      let action = "";
+
+      if (!existingAttendance || !existingAttendance.check_in_time) {
+        // Check-in logic
+        if (startTime && currentTime > startTime) {
+          status = "late";
+        }
+
+        if (!existingAttendance) {
+          // Create new attendance record with KL timezone
+          const { error: insertError } = await supabase.from("attendance").insert({
+            user_id: userId,
+            status,
+            check_in_time: klISOString,
+            location: location ? `${location.latitude},${location.longitude}` : null,
+          });
+
+          if (insertError) {
+            console.error("Error inserting attendance:", insertError);
+            throw insertError;
+          }
+        } else {
+          // Update existing absent record with check-in in KL timezone
+          const { error: updateError } = await supabase
+            .from("attendance")
+            .update({
+              check_in_time: klISOString,
+              status,
+              location: location ? `${location.latitude},${location.longitude}` : null,
+            })
+            .eq("attendance_id", existingAttendance.attendance_id);
+
+          if (updateError) {
+            console.error("Error updating attendance with check-in:", updateError);
+            throw updateError;
+          }
+        }
+
+        action = "check-in";
+        console.log(`Check-in successful for user ${userId} with status ${status}`);
+      } else {
+        // Check-out logic
+        if (endTime && currentTime < endTime) {
+          status = "early_out";
+        } else {
+          status = "present";
+        }
+
+        const { error: updateError } = await supabase
+          .from("attendance")
+          .update({
+            check_out_time: klISOString,
+            status,
+          })
+          .eq("attendance_id", existingAttendance.attendance_id);
+
+        if (updateError) {
+          console.error("Error updating attendance:", updateError);
+          throw updateError;
+        }
+
+        action = "check-out";
+        console.log(`Check-out successful for user ${userId} with status ${status}`);
+      }
+
       return new Response(
         JSON.stringify({
+          matched: true,
           match: true,
           user: userWithPhoto,
           confidence,
+          action,
+          status,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
