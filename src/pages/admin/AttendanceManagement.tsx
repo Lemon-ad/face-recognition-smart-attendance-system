@@ -110,6 +110,12 @@ export default function AttendanceManagement() {
   // Late dialog states
   const [showLateDialog, setShowLateDialog] = useState(false);
   const [lateCheckInTime, setLateCheckInTime] = useState('');
+  
+  // Missing check-in dialog states (for no_checkout and early_out)
+  const [showMissingCheckInDialog, setShowMissingCheckInDialog] = useState(false);
+  const [missingCheckInTime, setMissingCheckInTime] = useState('');
+  const [missingCheckOutTime, setMissingCheckOutTime] = useState('');
+  const [targetStatus, setTargetStatus] = useState<'no_checkout' | 'early_out'>('no_checkout');
 
   useEffect(() => {
     fetchDepartments();
@@ -350,11 +356,27 @@ export default function AttendanceManagement() {
       return;
     }
     
-    // If early_out, show dialog to input check_out_time
-    if (newStatus === 'early_out') {
-      setSelectedAttendanceId(attendanceId);
-      setShowEarlyOutDialog(true);
-      return;
+    // If early_out or no_checkout, check if check_in_time exists
+    if (newStatus === 'early_out' || newStatus === 'no_checkout') {
+      // Find the attendance record to check if check_in_time exists
+      const attendanceRecord = attendanceData.find(data => data.attendance?.attendance_id === attendanceId);
+      
+      if (!attendanceRecord?.attendance?.check_in_time) {
+        // No check_in_time, show dialog to input check_in_time (and check_out_time for early_out)
+        setSelectedAttendanceId(attendanceId);
+        setTargetStatus(newStatus);
+        setShowMissingCheckInDialog(true);
+        return;
+      }
+      
+      // Has check_in_time
+      if (newStatus === 'early_out') {
+        // Show dialog to input check_out_time
+        setSelectedAttendanceId(attendanceId);
+        setShowEarlyOutDialog(true);
+        return;
+      }
+      // For no_checkout with existing check_in_time, proceed to update (will clear check_out_time)
     }
 
     try {
@@ -514,6 +536,75 @@ export default function AttendanceManagement() {
     } catch (error) {
       console.error('Error updating early out time:', error);
       toast.error('Failed to update early out time');
+    }
+  };
+
+  const handleMissingCheckInSubmit = async () => {
+    if (!missingCheckInTime) {
+      toast.error('Please enter check-in time');
+      return;
+    }
+
+    if (targetStatus === 'early_out' && !missingCheckOutTime) {
+      toast.error('Please enter check-out time for early out');
+      return;
+    }
+
+    try {
+      // Create timestamps in UTC+8 (Malaysia time)
+      const now = new Date();
+      const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+      
+      // Parse check-in time
+      const [checkInHours, checkInMinutes] = missingCheckInTime.split(':');
+      const checkInTimestamp = new Date(Date.UTC(
+        malaysiaTime.getUTCFullYear(),
+        malaysiaTime.getUTCMonth(),
+        malaysiaTime.getUTCDate(),
+        parseInt(checkInHours),
+        parseInt(checkInMinutes),
+        0
+      ));
+
+      const updateData: any = { 
+        status: targetStatus,
+        check_in_time: checkInTimestamp.toISOString()
+      };
+
+      // If early_out, also set check_out_time
+      if (targetStatus === 'early_out' && missingCheckOutTime) {
+        const [checkOutHours, checkOutMinutes] = missingCheckOutTime.split(':');
+        const checkOutTimestamp = new Date(Date.UTC(
+          malaysiaTime.getUTCFullYear(),
+          malaysiaTime.getUTCMonth(),
+          malaysiaTime.getUTCDate(),
+          parseInt(checkOutHours),
+          parseInt(checkOutMinutes),
+          0
+        ));
+        updateData.check_out_time = checkOutTimestamp.toISOString();
+      } else if (targetStatus === 'no_checkout') {
+        // For no_checkout, ensure check_out_time is null
+        updateData.check_out_time = null;
+      }
+
+      const { error } = await supabase
+        .from('attendance')
+        .update(updateData)
+        .eq('attendance_id', selectedAttendanceId);
+
+      if (error) throw error;
+
+      toast.success(`Attendance updated to ${targetStatus.replace('_', ' ')}`);
+      setShowMissingCheckInDialog(false);
+      setMissingCheckInTime('');
+      setMissingCheckOutTime('');
+      setSelectedAttendanceId('');
+      setTargetStatus('no_checkout');
+      fetchAttendanceData();
+    } catch (error) {
+      console.error('Error updating attendance:', error);
+      toast.error('Failed to update attendance');
     }
   };
 
@@ -691,6 +782,56 @@ export default function AttendanceManagement() {
               Cancel
             </Button>
             <Button onClick={handleEarlyOutSubmit}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Missing Check-In Dialog (for no_checkout and early_out without check_in_time) */}
+      <Dialog open={showMissingCheckInDialog} onOpenChange={setShowMissingCheckInDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Check-In Time Required</DialogTitle>
+            <DialogDescription>
+              This user has no check-in time. Please enter check-in time{targetStatus === 'early_out' ? ' and check-out time' : ''}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="missing-check-in-time">Check-In Time *</Label>
+              <Input
+                id="missing-check-in-time"
+                type="time"
+                value={missingCheckInTime}
+                onChange={(e) => setMissingCheckInTime(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+            {targetStatus === 'early_out' && (
+              <div>
+                <Label htmlFor="missing-check-out-time">Check-Out Time *</Label>
+                <Input
+                  id="missing-check-out-time"
+                  type="time"
+                  value={missingCheckOutTime}
+                  onChange={(e) => setMissingCheckOutTime(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowMissingCheckInDialog(false);
+              setMissingCheckInTime('');
+              setMissingCheckOutTime('');
+              setSelectedAttendanceId('');
+              setTargetStatus('no_checkout');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleMissingCheckInSubmit}>
               Confirm
             </Button>
           </DialogFooter>
