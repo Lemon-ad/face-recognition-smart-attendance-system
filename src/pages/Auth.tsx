@@ -128,7 +128,7 @@ export default function Auth() {
                 onClick={() => setShowForgotPassword(true)}
                 className="text-sm text-primary hover:text-primary-hover transition-colors"
               >
-                Forgot password?
+                Forgot password? (for admin)
               </button>
             </div>
 
