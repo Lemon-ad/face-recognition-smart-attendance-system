@@ -503,6 +503,24 @@ export default function AttendanceManagement() {
     }
 
     try {
+      // Get the attendance record to check check_in_time
+      const attendanceRecord = attendanceData.find(data => data.attendance?.attendance_id === selectedAttendanceId);
+      
+      if (attendanceRecord?.attendance?.check_in_time) {
+        const checkInDate = new Date(attendanceRecord.attendance.check_in_time);
+        const [checkOutHours, checkOutMinutes] = earlyOutTime.split(':');
+        
+        // Create check-out timestamp on the same date as check-in
+        const checkOutDate = new Date(checkInDate);
+        checkOutDate.setHours(parseInt(checkOutHours), parseInt(checkOutMinutes), 0, 0);
+        
+        // Validate check-out is not earlier than check-in
+        if (checkOutDate <= checkInDate) {
+          toast.error('Check-out time cannot be earlier than or equal to check-in time');
+          return;
+        }
+      }
+
       // Create a timestamp in UTC+8 (Malaysia time)
       const now = new Date();
       const malaysiaTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -548,6 +566,20 @@ export default function AttendanceManagement() {
     if (targetStatus === 'early_out' && !missingCheckOutTime) {
       toast.error('Please enter check-out time for early out');
       return;
+    }
+
+    // Validate check-out time is not earlier than check-in time for early_out
+    if (targetStatus === 'early_out' && missingCheckOutTime) {
+      const [checkInHours, checkInMinutes] = missingCheckInTime.split(':');
+      const [checkOutHours, checkOutMinutes] = missingCheckOutTime.split(':');
+      
+      const checkInTotalMinutes = parseInt(checkInHours) * 60 + parseInt(checkInMinutes);
+      const checkOutTotalMinutes = parseInt(checkOutHours) * 60 + parseInt(checkOutMinutes);
+      
+      if (checkOutTotalMinutes <= checkInTotalMinutes) {
+        toast.error('Check-out time cannot be earlier than or equal to check-in time');
+        return;
+      }
     }
 
     try {
