@@ -58,44 +58,25 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
     setLoading(true);
 
     try {
-      // Get all admin users' emails
-      const { data: admins, error: adminsError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('role', 'admin')
-        .not('email', 'is', null);
+      // Call edge function to send reset emails to admins
+      const { data, error } = await supabase.functions.invoke('send-admin-reset-email', {
+        body: {
+          newPassword,
+          redirectUrl: `${window.location.origin}/reset-password?newPassword=${encodeURIComponent(newPassword)}`
+        }
+      });
 
-      if (adminsError) {
-        throw adminsError;
+      if (error) {
+        throw error;
       }
 
-      if (!admins || admins.length === 0) {
-        toast({
-          variant: 'destructive',
-          title: 'No Admins Found',
-          description: 'No admin accounts with email addresses found.',
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Send password reset email to all admins
-      const resetPromises = admins.map(admin => 
-        supabase.auth.resetPasswordForEmail(admin.email!, {
-          redirectTo: `${window.location.origin}/reset-password?newPassword=${encodeURIComponent(newPassword)}`,
-        })
-      );
-
-      const results = await Promise.all(resetPromises);
-      const hasError = results.some(result => result.error);
-
-      if (hasError) {
-        throw new Error('Failed to send some reset emails');
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send reset emails');
       }
 
       toast({
         title: 'Password Reset Email Sent',
-        description: `Confirmation link sent to ${admins.length} admin email(s). Click it within 5 minutes to complete the password reset.`,
+        description: `Confirmation link sent to ${data.count} admin email(s). Click it within 5 minutes to complete the password reset.`,
       });
 
       onOpenChange(false);
