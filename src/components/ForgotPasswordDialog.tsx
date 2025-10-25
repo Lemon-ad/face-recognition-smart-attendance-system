@@ -20,7 +20,6 @@ interface ForgotPasswordDialogProps {
 }
 
 export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialogProps) {
-  const [username, setUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -29,15 +28,6 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
   const { toast } = useToast();
 
   const handleResetPassword = async () => {
-    if (!username) {
-      toast({
-        variant: 'destructive',
-        title: 'Username Required',
-        description: 'Please enter your username.',
-      });
-      return;
-    }
-
     if (!newPassword || !confirmPassword) {
       toast({
         variant: 'destructive',
@@ -68,50 +58,47 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
     setLoading(true);
 
     try {
-      // Look up the admin user's email by username
-      const { data: user, error: userError } = await supabase
+      // Get all admin users' emails
+      const { data: admins, error: adminsError } = await supabase
         .from('users')
-        .select('email, role')
-        .eq('username', username)
+        .select('email')
         .eq('role', 'admin')
-        .single();
+        .not('email', 'is', null);
 
-      if (userError || !user) {
+      if (adminsError) {
+        throw adminsError;
+      }
+
+      if (!admins || admins.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Admin Not Found',
-          description: 'No admin account found with this username.',
+          title: 'No Admins Found',
+          description: 'No admin accounts with email addresses found.',
         });
         setLoading(false);
         return;
       }
 
-      if (!user.email) {
-        toast({
-          variant: 'destructive',
-          title: 'No Email Found',
-          description: 'This admin account does not have an email address.',
-        });
-        setLoading(false);
-        return;
-      }
+      // Send password reset email to all admins
+      const resetPromises = admins.map(admin => 
+        supabase.auth.resetPasswordForEmail(admin.email!, {
+          redirectTo: `${window.location.origin}/reset-password?newPassword=${encodeURIComponent(newPassword)}`,
+        })
+      );
 
-      // Send password reset email to the admin
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password?newPassword=${encodeURIComponent(newPassword)}`,
-      });
+      const results = await Promise.all(resetPromises);
+      const hasError = results.some(result => result.error);
 
-      if (error) {
-        throw error;
+      if (hasError) {
+        throw new Error('Failed to send some reset emails');
       }
 
       toast({
         title: 'Password Reset Email Sent',
-        description: 'A confirmation link has been sent to the admin email. Click it to complete the password reset.',
+        description: `Confirmation link sent to ${admins.length} admin email(s). Click it within 5 minutes to complete the password reset.`,
       });
 
       onOpenChange(false);
-      setUsername('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error) {
@@ -132,23 +119,11 @@ export function ForgotPasswordDialog({ open, onOpenChange }: ForgotPasswordDialo
         <DialogHeader>
           <DialogTitle>Admin Password Reset</DialogTitle>
           <DialogDescription>
-            Enter your admin username to receive password reset instructions via email.
+            Enter your new password. A confirmation link will be sent to all admin email addresses.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="Enter your admin username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="newPassword">New Password</Label>
             <div className="relative">

@@ -18,7 +18,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     // Check if there's a valid session from the reset link
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) {
         toast({
           title: "Invalid or expired link",
@@ -26,6 +26,39 @@ export default function ResetPassword() {
           variant: "destructive",
         });
         navigate('/auth');
+        return;
+      }
+
+      // Check if password is provided in URL (from forgot password dialog)
+      const urlParams = new URLSearchParams(window.location.search);
+      const presetPassword = urlParams.get('newPassword');
+      
+      if (presetPassword) {
+        // Automatically update the password
+        setLoading(true);
+        try {
+          const { error } = await supabase.auth.updateUser({
+            password: decodeURIComponent(presetPassword)
+          });
+
+          if (error) throw error;
+
+          toast({
+            title: "Password reset successful",
+            description: "Your password has been updated. You can now login.",
+          });
+
+          // Sign out and redirect to login
+          await supabase.auth.signOut();
+          navigate('/auth');
+        } catch (error: any) {
+          toast({
+            title: "Error updating password",
+            description: error.message || "An error occurred. Please try again.",
+            variant: "destructive",
+          });
+          setLoading(false);
+        }
       }
     });
   }, [navigate, toast]);
