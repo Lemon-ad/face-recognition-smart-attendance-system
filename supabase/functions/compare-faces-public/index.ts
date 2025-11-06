@@ -134,6 +134,7 @@ serve(async (req) => {
       formData.append("api_secret", FACEPP_API_SECRET);
       formData.append("image_url1", capturedImageUrl); // ImgBB URL with .jpg
       formData.append("image_url2", user.photo_url);   // Database photo_url
+      formData.append("return_image", "1");
 
       console.log(`  ⚡ Calling Face++ API with both URLs...`);
       const faceppResponse = await fetch(

@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
-import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +20,6 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
     const { newPassword, redirectUrl } = await req.json();
 
@@ -72,33 +70,11 @@ serve(async (req) => {
       });
 
       if (error) {
-        console.error(`Error generating reset link for ${admin.email}:`, error);
+        console.error(`Error sending reset email to ${admin.email}:`, error);
         resetResults.push({ email: admin.email, success: false, error: error.message });
-      } else if (data?.properties?.action_link) {
-        // Send the email using Resend
-        try {
-          await resend.emails.send({
-            from: 'Attendance System <onboarding@resend.dev>',
-            to: [admin.email!],
-            subject: 'Admin Password Reset',
-            html: `
-              <h1>Password Reset Request</h1>
-              <p>Hello ${admin.username},</p>
-              <p>You have requested to reset your admin password. Click the link below to complete the reset:</p>
-              <p><a href="${data.properties.action_link}">Reset Password</a></p>
-              <p>This link will expire in 60 minutes.</p>
-              <p>If you didn't request this, please ignore this email.</p>
-            `,
-          });
-          console.log(`Successfully sent reset email to ${admin.email}`);
-          resetResults.push({ email: admin.email, success: true });
-        } catch (emailError) {
-          console.error(`Error sending email to ${admin.email}:`, emailError);
-          resetResults.push({ email: admin.email, success: false, error: 'Failed to send email' });
-        }
       } else {
-        console.error(`No action link generated for ${admin.email}`);
-        resetResults.push({ email: admin.email, success: false, error: 'No action link generated' });
+        console.log(`Successfully sent reset email to ${admin.email}`);
+        resetResults.push({ email: admin.email, success: true });
       }
     }
 

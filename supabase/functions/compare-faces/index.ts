@@ -184,6 +184,7 @@ serve(async (req) => {
     formData.append("api_secret", FACEPP_API_SECRET);
     formData.append("image_url1", capturedImageUrl);
     formData.append("image_url2", userWithPhoto.photo_url);
+    formData.append("return_image", "1");
 
     const faceppResponse = await fetch(
       "https://api-us.faceplusplus.com/facepp/v3/compare",
