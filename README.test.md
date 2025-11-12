@@ -58,62 +58,11 @@ Tests are located next to the files they test:
 - ✓ Dialog closing and cleanup
 - ✓ Processing state management
 
-## Edge Function Tests (Deno)
-
-### Running Edge Function Tests
-
-```bash
-# Test upload-image function
-deno test --allow-env --allow-net supabase/functions/upload-image/__tests__/index.test.ts
-
-# Test compare-faces function
-deno test --allow-env --allow-net supabase/functions/compare-faces/__tests__/index.test.ts
-
-# Test compare-faces-public function
-deno test --allow-env --allow-net supabase/functions/compare-faces-public/__tests__/index.test.ts
-```
-
-### What's Tested
-
-#### upload-image Edge Function
-- ✓ CORS handling
-- ✓ Input validation (file presence, size, type)
-- ✓ File type validation
-- ✓ Image to base64 conversion
-- ✓ Response format validation
-- ✓ Environment configuration
-
-#### compare-faces Edge Function
-- ✓ Haversine distance calculation
-- ✓ Input validation (UUID, URL, coordinates)
-- ✓ Face matching logic
-- ✓ Attendance status determination
-- ✓ Authorization checks
-- ✓ Location validation
-- ✓ Environment configuration
-
-#### compare-faces-public Edge Function
-- ✓ Public access (no authentication)
-- ✓ IP logging for audit trail
-- ✓ Input validation
-- ✓ Multi-user face matching
-- ✓ Location verification
-- ✓ Group vs department location priority
-- ✓ Check-in/check-out logic
-- ✓ Timezone handling (Asia/Kuala_Lumpur)
-- ✓ Response handling
-- ✓ Error handling
-
 ## Test Coverage
 
 ### Frontend Components
 - **AuthContext**: 100% coverage of authentication flows
 - **PublicFaceScanDialog**: Comprehensive coverage of face scanning workflow
-
-### Edge Functions
-- **upload-image**: Core validation and processing logic
-- **compare-faces**: Attendance recording and location verification
-- **compare-faces-public**: Public face recognition and multi-user matching
 
 ## Writing New Tests
 
@@ -132,19 +81,15 @@ describe('MyComponent', () => {
 });
 ```
 
-### Edge Function Test Example
+## Edge Function Testing
 
-```typescript
-import { describe, it } from 'https://deno.land/std@0.192.0/testing/bdd.ts';
-import { assertEquals } from 'https://deno.land/std@0.192.0/testing/asserts.ts';
+Edge functions can be tested locally using Deno's test framework if needed:
 
-describe('My Edge Function', () => {
-  it('should process data correctly', () => {
-    const result = myFunction('input');
-    assertEquals(result, 'expected output');
-  });
-});
+```bash
+deno test --allow-env --allow-net supabase/functions/your-function/__tests__/index.test.ts
 ```
+
+**Note**: Edge function tests are not included in the main test suite to avoid Deno dependency downloads during builds.
 
 ## Continuous Integration
 
@@ -158,7 +103,7 @@ Tests should be run before:
 ### Common Issues
 
 1. **Tests failing due to missing mocks**: Check `src/tests/mocks/supabase.ts`
-2. **Environment variables**: Edge function tests need env vars set
+2. **Environment variables**: Ensure test environment is properly configured
 3. **Async issues**: Use `waitFor` for async operations
 4. **Clean up**: Tests clean up automatically via `afterEach`
 

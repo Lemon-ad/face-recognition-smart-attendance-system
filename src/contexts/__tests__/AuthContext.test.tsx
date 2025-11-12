@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '../../tests/utils/test-utils';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { mockSupabase } from '../../tests/mocks/supabase';
 import { BrowserRouter } from 'react-router-dom';
@@ -159,14 +159,22 @@ describe('AuthContext', () => {
         error: null,
       });
 
-      mockSupabase.from.mockReturnValue({
+      const mockChain = {
         select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        single: vi.fn(),
         maybeSingle: vi.fn().mockResolvedValue({
           data: { role: 'admin' },
           error: null,
         }),
-      });
+      };
+      mockSupabase.from.mockReturnValue(mockChain);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -188,14 +196,22 @@ describe('AuthContext', () => {
         error: null,
       });
 
-      mockSupabase.from.mockReturnValue({
+      const mockChain = {
         select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        gte: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        single: vi.fn(),
         maybeSingle: vi.fn().mockResolvedValue({
           data: null,
           error: null,
         }),
-      });
+      };
+      mockSupabase.from.mockReturnValue(mockChain);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
