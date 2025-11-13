@@ -185,10 +185,16 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
         // If email changed, trigger Supabase email verification
         if (emailChanged) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('No active session');
+
           const { error: emailUpdateError } = await supabase.functions.invoke('update-user-email', {
             body: {
               userId: user!.auth_uuid,
               newEmail: data.email,
+            },
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
             },
           });
 
@@ -305,7 +311,12 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save user',
+        description:
+          error instanceof Error
+            ? error.message
+            : typeof error === 'string'
+            ? error
+            : JSON.stringify(error),
       });
     } finally {
       setLoading(false);
