@@ -83,6 +83,7 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
     setValue,
     watch,
     reset,
+    setError,
   } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
   });
@@ -180,6 +181,28 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
     try {
       if (isEdit) {
+        // Preflight: ensure IC number is unique (excluding current user)
+        const icValue = data.ic_number?.trim();
+        if (icValue) {
+          const { data: existingIc } = await supabase
+            .from('users')
+            .select('user_id')
+            .eq('ic_number', icValue)
+            .neq('user_id', user!.user_id)
+            .maybeSingle();
+
+          if (existingIc) {
+            setError('ic_number', { type: 'manual', message: 'IC number already exists' });
+            toast({
+              variant: 'destructive',
+              title: 'Duplicate IC number',
+              description: 'Another user already has this IC number. Please use a unique value.',
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
         // Check if email has changed
         const emailChanged = user!.email !== data.email;
 
@@ -232,6 +255,27 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         // Create new user in auth
         if (!data.password) {
           throw new Error('Password is required for new users');
+        }
+
+        // Preflight: ensure IC number is unique for new user
+        const newIc = data.ic_number?.trim();
+        if (newIc) {
+          const { data: existingIc } = await supabase
+            .from('users')
+            .select('user_id')
+            .eq('ic_number', newIc)
+            .maybeSingle();
+
+          if (existingIc) {
+            setError('ic_number', { type: 'manual', message: 'IC number already exists' });
+            toast({
+              variant: 'destructive',
+              title: 'Duplicate IC number',
+              description: 'Another user already has this IC number. Please use a unique value.',
+            });
+            setLoading(false);
+            return;
+          }
         }
 
         const { data: authData, error: authError } = await supabase.auth.signUp({
