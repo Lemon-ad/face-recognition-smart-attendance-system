@@ -180,7 +180,22 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
     try {
       if (isEdit) {
-        // Update existing user
+        // Check if email has changed
+        const emailChanged = user!.email !== data.email;
+
+        // If email changed, trigger Supabase email verification
+        if (emailChanged) {
+          const { error: emailUpdateError } = await supabase.functions.invoke('update-user-email', {
+            body: {
+              userId: user!.auth_uuid,
+              newEmail: data.email,
+            },
+          });
+
+          if (emailUpdateError) throw emailUpdateError;
+        }
+
+        // Update existing user in users table
         const { error: updateError } = await supabase
           .from('users')
           .update({
@@ -203,7 +218,9 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
 
         toast({
           title: 'Success',
-          description: 'User updated successfully',
+          description: emailChanged 
+            ? 'User updated successfully. Verification email sent to new address.'
+            : 'User updated successfully',
         });
       } else {
         // Create new user in auth
