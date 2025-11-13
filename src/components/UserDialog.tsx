@@ -227,24 +227,28 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         if (!authData.user) throw new Error('Failed to create user');
 
         // Create user in users table
-        const { error: insertError } = await supabase.from('users').insert({
-          auth_uuid: authData.user.id,
-          username: data.username,
-          email: data.email,
-          first_name: data.first_name,
-          middle_name: data.middle_name || null,
-          last_name: data.last_name,
-          phone_number: data.phone_number || null,
-          ic_number: data.ic_number || null,
-          role: 'member',
-          position_name: data.position_name || null,
-          department_id: data.department_id || null,
-          group_id: data.group_id || null,
-          date_of_joining: data.date_of_joining ? format(data.date_of_joining, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-          photo_url: photoUrl,
-        });
+        const { data: insertData, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            auth_uuid: authData.user.id,
+            username: data.username,
+            email: data.email,
+            first_name: data.first_name,
+            middle_name: data.middle_name || null,
+            last_name: data.last_name,
+            phone_number: data.phone_number || null,
+            ic_number: data.ic_number || null,
+            role: 'member',
+            position_name: data.position_name || null,
+            department_id: data.department_id || null,
+            group_id: data.group_id || null,
+            date_of_joining: data.date_of_joining ? format(data.date_of_joining, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+            photo_url: photoUrl,
+          })
+          .select()
+          .single();
 
-        if (insertError) throw insertError;
+        if (insertError || !insertData) throw insertError || new Error('Failed to create user');
 
         // Create user role entry
         const { error: roleError } = await supabase.from('user_roles').insert({
@@ -253,6 +257,22 @@ export function UserDialog({ open, onOpenChange, user, onSuccess }: UserDialogPr
         });
 
         if (roleError) throw roleError;
+
+        // Create initial attendance record for today
+        const { error: attendanceError } = await supabase
+          .from('attendance')
+          .insert({
+            user_id: insertData.user_id,
+            status: 'absent',
+            check_in_time: null,
+            check_out_time: null,
+            location: null,
+          });
+
+        if (attendanceError) {
+          console.error('Error creating initial attendance:', attendanceError);
+          // Don't throw - user creation succeeded, just log the error
+        }
 
         toast({
           title: 'Success',
